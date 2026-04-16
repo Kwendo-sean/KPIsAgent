@@ -1,0 +1,267 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Overview | KPIConsole{% endblock %}
+{% block eyebrow %}Overview{% endblock %}
+{% block page_title %}Good <em id="greetingPart">day</em>, {{ user.get_full_name|default:user.username }}{% endblock %}
+{% block subtitle %}A live snapshot of cash movement, statement health, and recent financial activity.{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Override: 3 cards per row on overview, 4th card spans full width */
+    .card-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .stat-card.card-wide {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        align-items: center;
+        min-height: 100px;
+    }
+    .stat-card.card-wide .stat-icon {
+        font-size: 7rem;
+        right: 12px;
+        bottom: -18px;
+    }
+    @media (max-width: 900px) {
+        .card-grid { grid-template-columns: repeat(2, 1fr); }
+        .stat-card.card-wide { grid-column: auto; grid-template-columns: 1fr; }
+    }
+    @media (max-width: 580px) {
+        .card-grid { grid-template-columns: 1fr; }
+        .stat-card.card-wide { grid-column: auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if total_statements %}
+<!-- Summary Type Selector -->
+<section class="summary-selector">
+    <div class="selector-header">
+        <h2 class="panel-title"><i class="fas fa-filters"></i> Summary View</h2>
+        <span class="panel-note">Choose insights to display</span>
+    </div>
+    <div class="selector-options">
+        {% for option in summary_options %}
+        <a href="?summary_type={{ option.key }}" class="selector-option {% if summary_type == option.key %}is-active{% endif %}">
+            <i class="fas {{ option.icon }}"></i>
+            <span>{{ option.label }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card-grid">
+    {% for card in summary_cards %}
+    <article class="stat-card tone-{{ card.tone }}{% if forloop.last %} card-wide{% endif %}">
+        <div>
+            <div class="stat-label">{{ card.label }}</div>
+            <div class="stat-value mono">{{ card.value }}</div>
+            <div class="stat-meta">{{ card.meta }}</div>
+        </div>
+        {% if forloop.last %}
+        <div style="text-align:center; opacity:.35; font-size:3rem; color:var(--muted);">
+            <i class="fas {{ card.icon }}"></i>
+        </div>
+        <div style="text-align:right;">
+            <span class="tag {% if 'rose' in card.tone or 'bad' in card.tone %}danger{% else %}success{% endif %}" style="font-size:.8rem; padding:6px 16px;">
+                {% if 'rose' in card.tone or 'bad' in card.tone %}Net Loss{% else %}Net Profit{% endif %}
+            </span>
+        </div>
+        {% endif %}
+        <i class="stat-icon fas {{ card.icon }}"></i>
+    </article>
+    {% endfor %}
+</section>
+
+<!-- Detailed Summaries Section -->
+{% if detailed_summaries %}
+<section class="summaries-section">
+    <div class="panel summaries-panel">
+        <div class="panel-head">
+            <h2 class="panel-title">
+                <i class="fas fa-lightbulb"></i>
+                {% if summary_type == "overview" %}Key Insights
+                {% elif summary_type == "revenue_sources" %}Revenue Analysis
+                {% elif summary_type == "expense_breakdown" %}Expense Analysis
+                {% elif summary_type == "transaction_patterns" %}Transaction Patterns
+                {% elif summary_type == "top_insights" %}Strategic Insights
+                {% endif %}
+            </h2>
+            <span class="panel-note">Based on your {{ total_statements }} statement{{ total_statements|pluralize }}</span>
+        </div>
+        <div class="summaries-grid">
+            {% for summary in detailed_summaries %}
+            <div class="summary-card tone-{{ summary.tone }}">
+                <div class="summary-header">
+                    <i class="fas {{ summary.icon }}"></i>
+                    <h3>{{ summary.title }}</h3>
+                </div>
+                <div class="summary-content">
+                    {% if summary.is_html %}
+                        {{ summary.content|safe }}
+                    {% else %}
+                        <p>{{ summary.content|safe }}</p>
+                    {% endif %}
+                    {% if summary.detail %}
+                        <span class="summary-detail">{{ summary.detail }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="two-col">
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Revenue vs Expenses</h2>
+            <span class="panel-note">All processed statements</span>
+        </div>
+        <div class="chart-box">
+            <canvas id="cashPositionChart"></canvas>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Alert Feed</h2>
+            <a class="link-btn" href="{% url 'assistant' %}">Open assistant</a>
+        </div>
+        <div class="alert-stack">
+            {% for alert in alerts %}
+            <div class="alert-card">
+                <span class="tag {% if alert.severity == 'CRITICAL' %}danger{% elif alert.severity == 'WARNING' %}warning{% else %}info{% endif %}">{{ alert.severity }}</span>
+                <p><strong>{{ alert.title }}</strong></p>
+                <p>{{ alert.content }}</p>
+            </div>
+            {% empty %}
+            <div class="alert-card">
+                <span class="tag success">Stable</span>
+                <p>No active alerts for the latest processed statement.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="two-col">
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Recent Statements</h2>
+            <a class="link-btn" href="{% url 'statements' %}">Manage library</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Period</th>
+                        <th style="text-align:right;">Balance</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in statement_rows|slice:":6" %}
+                    <tr>
+                        <td><a href="{% url 'statement_detail' row.id %}" class="link-btn">{{ row.file_name }}</a></td>
+                        <td class="muted">{{ row.period }}</td>
+                        <td class="mono" style="text-align:right;">KES {{ row.closing_balance|floatformat:2 }}</td>
+                        <td>
+                            <span class="tag {% if row.status == 'Processed' %}success{% else %}danger{% endif %}">{{ row.status }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="muted">No statements yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Expense Mix</h2>
+            <span class="panel-note">Latest processed statement</span>
+        </div>
+        <div class="chart-box">
+            <canvas id="expenseMixChart"></canvas>
+        </div>
+    </div>
+</section>
+
+{% else %}
+<section class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+    <h3>No statements yet</h3>
+    <p>Import a PDF or CSV bank statement to get started. Once processed, this overview will show portfolio KPIs, revenue vs expense charts, alerts, and recent activity.</p>
+    <div style="margin-top:28px;">
+        <button class="primary-btn" type="button" id="openUploadModal">
+            <i class="fas fa-plus"></i> Import First Statement
+        </button>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if total_statements %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#6C7A72', font: { family: 'Inter', size: 12 } } } },
+    };
+
+    new Chart(document.getElementById('cashPositionChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ overview_chart_labels_json|safe }},
+            datasets: [
+                {
+                    label: 'Revenue (KES)',
+                    data: {{ overview_revenue_series_json|safe }},
+                    backgroundColor: 'rgba(44,122,92,.85)',
+                    borderRadius: 8,
+                    borderSkipped: false,
+                },
+                {
+                    label: 'Expenses (KES)',
+                    data: {{ overview_expense_series_json|safe }},
+                    backgroundColor: 'rgba(217,119,6,.7)',
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }
+            ]
+        },
+        options: {
+            ...chartDefaults,
+            scales: {
+                x: { ticks: { color: '#6C7A72' }, grid: { display: false } },
+                y: { ticks: { color: '#6C7A72', callback: v => v >= 1000 ? 'KES ' + (v/1000).toFixed(0) + 'k' : 'KES ' + v.toLocaleString() }, grid: { color: '#ECF2EC' } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('expenseMixChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ expense_labels_json|safe }},
+            datasets: [{
+                data: {{ expense_values_json|safe }},
+                backgroundColor: ['#1A4D3E','#2C7A5C','#5E907A','#8DB39F','#B3D0BE','#D97706','#F59E0B','#FCD34D','#6B7280','#D1D9D1'],
+                borderWidth: 0,
+                hoverOffset: 6,
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: { legend: { labels: { color: '#6C7A72' }, position: 'bottom' } },
+            cutout: '66%',
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

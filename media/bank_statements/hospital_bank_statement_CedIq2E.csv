@@ -1,0 +1,101 @@
+Date,Description,Reference,Debit,Credit,Balance,Category,TransactionType
+2025-01-02,Patient Payment - OPD Cash,RCP-100423,,1250.00,251250.00,Patient Revenue,DEPOSIT
+2025-01-03,BlueCross Insurance Reimbursement,INS-BC-78231,,18450.00,269700.00,Insurance Revenue,DEPOSIT
+2025-01-03,Medical Supplies - MedLine Kenya,PO-2025-001,42300.00,,227400.00,Medical Supplies,WITHDRAWAL
+2025-01-04,Staff Salaries - January Advance,SAL-JAN-ADV,85000.00,,142400.00,Salaries,WITHDRAWAL
+2025-01-05,Pharmacy Sales - Daily Float,RCP-PHARM-001,,6780.50,149180.50,Pharmacy Revenue,DEPOSIT
+2025-01-06,NHIF Reimbursement Batch 001,NHIF-JAN-01,,32400.00,181580.50,Insurance Revenue,DEPOSIT
+2025-01-06,Kenya Power Utility Bill - December,KPLC-DEC2024,18750.00,,162830.50,Utilities,WITHDRAWAL
+2025-01-07,Lab Revenue - Pathology Tests,LAB-RCP-001,,4320.00,167150.50,Laboratory Revenue,DEPOSIT
+2025-01-07,Office Rent - January 2025,RENT-JAN-2025,55000.00,,112150.50,Rent,WITHDRAWAL
+2025-01-08,Patient Payment - OPD Cash,RCP-100424,,980.00,113130.50,Patient Revenue,DEPOSIT
+2025-01-08,Aga Khan Hospital Referral Income,REF-AKH-001,,7200.00,120330.50,Patient Revenue,DEPOSIT
+2025-01-09,Biomedical Equipment Maintenance,MAINT-2025-01,12500.00,,107830.50,Maintenance,WITHDRAWAL
+2025-01-09,Pharmacy Restock - GlaxoSmithKline,PO-GSK-001,28900.00,,78930.50,Medical Supplies,WITHDRAWAL
+2025-01-10,AAR Insurance Reimbursement,INS-AAR-4521,,22100.00,101030.50,Insurance Revenue,DEPOSIT
+2025-01-10,Lab Revenue - Radiology and Imaging,LAB-RCP-002,,8750.00,109780.50,Laboratory Revenue,DEPOSIT
+2025-01-11,Bank Charges - Monthly Service Fee,CHG-KCB-JAN,1200.00,,108580.50,Bank Charges,WITHDRAWAL
+2025-01-13,Patient Payment - IPD Discharge,RCP-IPD-001,,45600.00,154180.50,Patient Revenue,DEPOSIT
+2025-01-13,Jubilee Health Insurance Claim,INS-JUB-3312,,17800.00,171980.50,Insurance Revenue,DEPOSIT
+2025-01-14,Medical Waste Disposal - Veolia,INV-VEO-JAN,4800.00,,167180.50,Maintenance,WITHDRAWAL
+2025-01-14,Pharmacy Sales - Daily Float,RCP-PHARM-002,,7910.00,175090.50,Pharmacy Revenue,DEPOSIT
+2025-01-15,Staff Salaries - January Main Run,SAL-JAN-2025,180000.00,,-4909.50,Salaries,WITHDRAWAL
+2025-01-15,Fund Transfer In - HQ Account,TRF-HQ-001,,200000.00,195090.50,Transfer,TRANSFER
+2025-01-16,Lab Revenue - Blood Bank,LAB-RCP-003,,3100.00,198190.50,Laboratory Revenue,DEPOSIT
+2025-01-16,Internet and IT Services - Safaricom,IT-SAF-JAN,3600.00,,194590.50,Software and IT,WITHDRAWAL
+2025-01-17,NHIF Reimbursement Batch 002,NHIF-JAN-02,,28900.00,223490.50,Insurance Revenue,DEPOSIT
+2025-01-17,Surgical Instruments - Surgipro Ltd,PO-SURG-001,19400.00,,204090.50,Medical Supplies,WITHDRAWAL
+2025-01-18,Patient Payment - OPD Cash,RCP-100425,,1540.00,205630.50,Patient Revenue,DEPOSIT
+2025-01-20,MedStar EMR Software Subscription,SOFT-MEDSTAR-01,8500.00,,197130.50,Software and IT,WITHDRAWAL
+2025-01-20,Pharmacy Sales - Daily Float,RCP-PHARM-003,,6230.00,203360.50,Pharmacy Revenue,DEPOSIT
+2025-01-21,CIC Insurance Reimbursement,INS-CIC-6710,,9800.00,213160.50,Insurance Revenue,DEPOSIT
+2025-01-21,Catering Services - January,CATR-JAN-2025,14200.00,,198960.50,Operational Expenses,WITHDRAWAL
+2025-01-22,Patient Payment - IPD Discharge,RCP-IPD-002,,38200.00,237160.50,Patient Revenue,DEPOSIT
+2025-01-22,Fuel - Generator and Vehicles,FUEL-JAN-01,7800.00,,229360.50,Utilities,WITHDRAWAL
+2025-01-23,Lab Revenue - Pathology Tests,LAB-RCP-004,,5600.00,234960.50,Laboratory Revenue,DEPOSIT
+2025-01-24,KRA VAT Payment - December 2024,KRA-VAT-DEC24,21500.00,,213460.50,Tax Payments,WITHDRAWAL
+2025-01-24,Jubilee Health Insurance Claim,INS-JUB-3398,,14300.00,227760.50,Insurance Revenue,DEPOSIT
+2025-01-25,Water and Sewerage - Nairobi Water,NWS-JAN-2025,4200.00,,223560.50,Utilities,WITHDRAWAL
+2025-01-27,Pharmacy Sales - Daily Float,RCP-PHARM-004,,8410.00,231970.50,Pharmacy Revenue,DEPOSIT
+2025-01-27,Medical Supplies - MedLine Kenya,PO-2025-002,38700.00,,193270.50,Medical Supplies,WITHDRAWAL
+2025-01-28,BlueCross Insurance Reimbursement,INS-BC-78412,,21600.00,214870.50,Insurance Revenue,DEPOSIT
+2025-01-28,Equipment Loan Repayment - KCB,LOAN-KCB-JAN,35000.00,,179870.50,Equipment Payments,WITHDRAWAL
+2025-01-29,Lab Revenue - Radiology and Imaging,LAB-RCP-005,,9200.00,189070.50,Laboratory Revenue,DEPOSIT
+2025-01-29,Patient Payment - OPD Cash,RCP-100426,,2100.00,191170.50,Patient Revenue,DEPOSIT
+2025-01-30,Security Services - G4S January,SEC-G4S-JAN,9500.00,,181670.50,Operational Expenses,WITHDRAWAL
+2025-01-31,NHIF Reimbursement Batch 003,NHIF-JAN-03,,41200.00,222870.50,Insurance Revenue,DEPOSIT
+2025-01-31,Housekeeping Supplies - Bidco,PO-BIDC-001,6300.00,,216570.50,Operational Expenses,WITHDRAWAL
+2025-02-03,Patient Payment - OPD Cash,RCP-100427,,1850.00,218420.50,Patient Revenue,DEPOSIT
+2025-02-03,Pharmacy Restock - GlaxoSmithKline,PO-GSK-002,31500.00,,186920.50,Medical Supplies,WITHDRAWAL
+2025-02-04,AAR Insurance Reimbursement,INS-AAR-4608,,19700.00,206620.50,Insurance Revenue,DEPOSIT
+2025-02-04,Pharmacy Sales - Daily Float,RCP-PHARM-005,,7100.00,213720.50,Pharmacy Revenue,DEPOSIT
+2025-02-05,Kenya Power Utility Bill - January,KPLC-JAN2025,19400.00,,194320.50,Utilities,WITHDRAWAL
+2025-02-05,Patient Payment - IPD Discharge,RCP-IPD-003,,52000.00,246320.50,Patient Revenue,DEPOSIT
+2025-02-06,Lab Revenue - Pathology Tests,LAB-RCP-006,,4800.00,251120.50,Laboratory Revenue,DEPOSIT
+2025-02-06,Biomedical Equipment Maintenance,MAINT-2025-02,11000.00,,240120.50,Maintenance,WITHDRAWAL
+2025-02-07,Jubilee Health Insurance Claim,INS-JUB-3451,,16500.00,256620.50,Insurance Revenue,DEPOSIT
+2025-02-07,Office Rent - February 2025,RENT-FEB-2025,55000.00,,201620.50,Rent,WITHDRAWAL
+2025-02-08,NHIF Reimbursement Batch 004,NHIF-FEB-01,,36800.00,238420.50,Insurance Revenue,DEPOSIT
+2025-02-10,Pharmacy Sales - Daily Float,RCP-PHARM-006,,6540.00,244960.50,Pharmacy Revenue,DEPOSIT
+2025-02-10,Staff Salaries - February Advance,SAL-FEB-ADV,85000.00,,159960.50,Salaries,WITHDRAWAL
+2025-02-11,BlueCross Insurance Reimbursement,INS-BC-78589,,24300.00,184260.50,Insurance Revenue,DEPOSIT
+2025-02-11,Surgical Instruments - Surgipro Ltd,PO-SURG-002,22100.00,,162160.50,Medical Supplies,WITHDRAWAL
+2025-02-12,Medical Waste Disposal - Veolia,INV-VEO-FEB,4800.00,,157360.50,Maintenance,WITHDRAWAL
+2025-02-12,Lab Revenue - Blood Bank,LAB-RCP-007,,2900.00,160260.50,Laboratory Revenue,DEPOSIT
+2025-02-13,Patient Payment - OPD Cash,RCP-100428,,3200.00,163460.50,Patient Revenue,DEPOSIT
+2025-02-13,Internet and IT Services - Safaricom,IT-SAF-FEB,3600.00,,159860.50,Software and IT,WITHDRAWAL
+2025-02-14,CIC Insurance Reimbursement,INS-CIC-6812,,11400.00,171260.50,Insurance Revenue,DEPOSIT
+2025-02-15,Staff Salaries - February Main Run,SAL-FEB-2025,180000.00,,-8739.50,Salaries,WITHDRAWAL
+2025-02-15,Fund Transfer In - HQ Account,TRF-HQ-002,,220000.00,211260.50,Transfer,TRANSFER
+2025-02-17,Pharmacy Sales - Daily Float,RCP-PHARM-007,,8800.00,220060.50,Pharmacy Revenue,DEPOSIT
+2025-02-17,MedStar EMR Software Subscription,SOFT-MEDSTAR-02,8500.00,,211560.50,Software and IT,WITHDRAWAL
+2025-02-18,Patient Payment - IPD Discharge,RCP-IPD-004,,41800.00,253360.50,Patient Revenue,DEPOSIT
+2025-02-18,Medical Supplies - MedLine Kenya,PO-2025-003,44500.00,,208860.50,Medical Supplies,WITHDRAWAL
+2025-02-19,Aga Khan Hospital Referral Income,REF-AKH-002,,8400.00,217260.50,Patient Revenue,DEPOSIT
+2025-02-19,Fuel - Generator and Vehicles,FUEL-FEB-01,8200.00,,209060.50,Utilities,WITHDRAWAL
+2025-02-20,NHIF Reimbursement Batch 005,NHIF-FEB-02,,29700.00,238760.50,Insurance Revenue,DEPOSIT
+2025-02-20,Bank Charges - Monthly Service Fee,CHG-KCB-FEB,1200.00,,237560.50,Bank Charges,WITHDRAWAL
+2025-02-21,Lab Revenue - Radiology and Imaging,LAB-RCP-008,,10400.00,247960.50,Laboratory Revenue,DEPOSIT
+2025-02-21,KRA PAYE Remittance - January 2025,KRA-PAYE-JAN,38000.00,,209960.50,Tax Payments,WITHDRAWAL
+2025-02-22,Catering Services - February,CATR-FEB-2025,14200.00,,195760.50,Operational Expenses,WITHDRAWAL
+2025-02-24,Patient Payment - OPD Cash,RCP-100429,,2750.00,198510.50,Patient Revenue,DEPOSIT
+2025-02-24,Equipment Loan Repayment - KCB,LOAN-KCB-FEB,35000.00,,163510.50,Equipment Payments,WITHDRAWAL
+2025-02-25,AAR Insurance Reimbursement,INS-AAR-4712,,18200.00,181710.50,Insurance Revenue,DEPOSIT
+2025-02-25,Water and Sewerage - Nairobi Water,NWS-FEB-2025,4200.00,,177510.50,Utilities,WITHDRAWAL
+2025-02-26,Pharmacy Sales - Daily Float,RCP-PHARM-008,,7650.00,185160.50,Pharmacy Revenue,DEPOSIT
+2025-02-26,Security Services - G4S February,SEC-G4S-FEB,9500.00,,175660.50,Operational Expenses,WITHDRAWAL
+2025-02-27,Jubilee Health Insurance Claim,INS-JUB-3520,,13900.00,189560.50,Insurance Revenue,DEPOSIT
+2025-02-28,NHIF Reimbursement Batch 006,NHIF-FEB-03,,33500.00,223060.50,Insurance Revenue,DEPOSIT
+2025-03-03,Patient Payment - OPD Cash,RCP-100430,,2200.00,225260.50,Patient Revenue,DEPOSIT
+2025-03-03,Pharmacy Restock - GlaxoSmithKline,PO-GSK-003,29800.00,,195460.50,Medical Supplies,WITHDRAWAL
+2025-03-04,Kenya Power Utility Bill - February,KPLC-FEB2025,20100.00,,175360.50,Utilities,WITHDRAWAL
+2025-03-04,BlueCross Insurance Reimbursement,INS-BC-78734,,26500.00,201860.50,Insurance Revenue,DEPOSIT
+2025-03-05,Lab Revenue - Pathology Tests,LAB-RCP-009,,5900.00,207760.50,Laboratory Revenue,DEPOSIT
+2025-03-05,Office Rent - March 2025,RENT-MAR-2025,55000.00,,152760.50,Rent,WITHDRAWAL
+2025-03-06,Staff Salaries - March Advance,SAL-MAR-ADV,85000.00,,67760.50,Salaries,WITHDRAWAL
+2025-03-06,NHIF Reimbursement Batch 007,NHIF-MAR-01,,44100.00,111860.50,Insurance Revenue,DEPOSIT
+2025-03-07,Patient Payment - IPD Discharge,RCP-IPD-005,,63500.00,175360.50,Patient Revenue,DEPOSIT
+2025-03-07,Biomedical Equipment Maintenance,MAINT-2025-03,13500.00,,161860.50,Maintenance,WITHDRAWAL
+2025-03-08,Pharmacy Sales - Daily Float,RCP-PHARM-009,,9120.00,170980.50,Pharmacy Revenue,DEPOSIT
+2025-03-10,Surgical Instruments - Surgipro Ltd,PO-SURG-003,18700.00,,152280.50,Medical Supplies,WITHDRAWAL
+2025-03-10,CIC Insurance Reimbursement,INS-CIC-6934,,12800.00,165080.50,Insurance Revenue,DEPOSIT

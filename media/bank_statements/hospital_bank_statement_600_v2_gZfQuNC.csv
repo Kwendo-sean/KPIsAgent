@@ -1,0 +1,601 @@
+Date,Description,Reference,Debit,Credit,Balance,Category,TransactionType
+2023-06-15,Patient Monitoring Equipment,INV2000000,9344.50,,490655.50,Medical Supplies,WITHDRAWAL
+2023-06-16,Claim Reimbursement - BCBS,REF2000001,,5762.01,496417.51,Insurance Revenue,DEPOSIT
+2023-06-17,Office Suite License,EFT2000002,2384.28,,494033.23,Software Expense,WITHDRAWAL
+2023-06-19,Emergency Department Bill,TXN2000003,,430.74,494463.97,Patient Revenue,DEPOSIT
+2023-06-21,Claim Reimbursement - United,TXN2000004,,17935.69,512399.66,Insurance Revenue,DEPOSIT
+2023-06-23,Claim Reimbursement - BCBS,EFT2000005,,18357.33,530756.99,Insurance Revenue,DEPOSIT
+2023-06-25,Pharmacy Copay,ACH2000006,,1246.97,532003.96,Patient Revenue,DEPOSIT
+2023-06-26,Hormone Level Testing,TXN2000007,,3469.93,535473.89,Lab Revenue,DEPOSIT
+2023-06-27,Medicare Reimbursement - Part B,ACH2000008,,16135.51,551609.40,Insurance Revenue,DEPOSIT
+2023-06-28,Injectable Medication Sales,TXN2000009,,183.98,551793.38,Pharmacy Revenue,DEPOSIT
+2023-06-29,Diagnostic Equipment Lease,WIR2000010,9729.18,,542064.20,Rent Expense,WITHDRAWAL
+2023-07-01,Medicaid State Reimbursement,INV2000011,,18902.31,560966.51,Insurance Revenue,DEPOSIT
+2023-07-02,Immunization Fee,CHK2000012,,26.04,560992.55,Patient Revenue,DEPOSIT
+2023-07-05,Claim Reimbursement - BCBS,INV2000013,,16297.70,577290.25,Insurance Revenue,DEPOSIT
+2023-07-06,Contingency Fund Deposit,INV2000014,,4318.38,581608.63,Transfer,TRANSFER
+2023-07-09,Returned Item Fee,TXN2000015,169.05,,581439.58,Bank Fees,WITHDRAWAL
+2023-07-11,Emergency Department Bill,DEP2000016,,2378.92,583818.50,Patient Revenue,DEPOSIT
+2023-07-13,Mental Health Coverage Reimbursement,CHK2000017,,1781.03,585599.53,Insurance Revenue,DEPOSIT
+2023-07-14,Medicare Reimbursement - Part B,EFT2000018,,12250.84,597850.37,Insurance Revenue,DEPOSIT
+2023-07-15,Radiology Services Payment,CHK2000019,,941.64,598792.01,Patient Revenue,DEPOSIT
+2023-07-16,Injectable Medication Sales,DEP2000020,,3309.09,602101.10,Pharmacy Revenue,DEPOSIT
+2023-07-17,Radiology Services Payment,REF2000021,,531.21,602632.31,Patient Revenue,DEPOSIT
+2023-07-18,Administrative Staff Payroll,TXN2000022,16565.19,,586067.12,Salary Expense,WITHDRAWAL
+2023-07-21,Specialty Pharma Distribution,DEP2000023,,6278.33,592345.45,Pharmacy Revenue,DEPOSIT
+2023-07-22,Housekeeping Payroll,EFT2000024,13955.97,,578389.48,Salary Expense,WITHDRAWAL
+2023-07-23,Surgical Procedure Payment,REF2000025,,291.83,578681.31,Patient Revenue,DEPOSIT
+2023-07-24,Revenue Cycle Payroll,CHK2000026,13818.29,,564863.02,Salary Expense,WITHDRAWAL
+2023-07-25,Sterile Needle and Syringe Stock,TXN2000027,1736.90,,563126.12,Medical Supplies,WITHDRAWAL
+2023-07-27,Electric Utility Bill,WIR2000028,3061.12,,560065.00,Utilities,WITHDRAWAL
+2023-07-28,Housekeeping Payroll,INV2000029,8672.62,,551392.38,Salary Expense,WITHDRAWAL
+2023-07-29,Respiratory Equipment,TXN2000030,9263.20,,542129.18,Medical Supplies,WITHDRAWAL
+2023-07-30,Patient Co-pay - Office Visit,INV2000031,,667.58,542796.76,Patient Revenue,DEPOSIT
+2023-07-31,Prior Year Tax Settlement,DEP2000032,5925.52,,536871.24,Tax Payment,WITHDRAWAL
+2023-08-01,Telephone System Bill,INV2000033,1565.91,,535305.33,Utilities,WITHDRAWAL
+2023-08-02,Contractor Medical Personnel,TXN2000034,15832.33,,519473.00,Salary Expense,WITHDRAWAL
+2023-08-03,Specialist Consultation,INV2000035,,1821.62,521294.62,Patient Revenue,DEPOSIT
+2023-08-04,Specimen Processing Fees,TXN2000036,,3779.79,525074.41,Lab Revenue,DEPOSIT
+2023-08-06,Injectable Medication Sales,WIR2000037,,4130.95,529205.36,Pharmacy Revenue,DEPOSIT
+2023-08-07,Rehabilitation Services,WIR2000038,,906.37,530111.73,Patient Revenue,DEPOSIT
+2023-08-08,Medicare Reimbursement - Part B,EFT2000039,,16794.83,546906.56,Insurance Revenue,DEPOSIT
+2023-08-10,Radiology Services Payment,REF2000040,,143.04,547049.60,Patient Revenue,DEPOSIT
+2023-08-11,Registered Nurse Payroll,EFT2000041,10871.62,,536177.98,Salary Expense,WITHDRAWAL
+2023-08-12,Digital Microscope System,TXN2000042,23552.13,,512625.85,Equipment,WITHDRAWAL
+2023-08-15,Suture and Staple Supplies,DEP2000043,970.10,,511655.75,Medical Supplies,WITHDRAWAL
+2023-08-16,Lab Work Payment,TXN2000044,,2046.90,513702.65,Patient Revenue,DEPOSIT
+2023-08-17,Laboratory Management System,CHK2000045,2812.79,,510889.86,Software Expense,WITHDRAWAL
+2023-08-18,Storage Facility Rental,EFT2000046,7990.12,,502899.74,Rent Expense,WITHDRAWAL
+2023-08-19,Housekeeping Payroll,ACH2000047,14995.91,,487903.83,Salary Expense,WITHDRAWAL
+2023-08-20,Claim Reimbursement - Anthem PPO,TXN2000048,,4146.77,492050.60,Insurance Revenue,DEPOSIT
+2023-08-22,HVAC System Maintenance,INV2000049,2887.08,,489163.52,Maintenance,WITHDRAWAL
+2023-08-23,Claim Reimbursement - BCBS,INV2000050,,3450.84,492614.36,Insurance Revenue,DEPOSIT
+2023-08-24,Respiratory Equipment,INV2000051,7148.04,,485466.32,Medical Supplies,WITHDRAWAL
+2023-08-25,Patient Portal License,INV2000052,2666.15,,482800.17,Software Expense,WITHDRAWAL
+2023-08-27,Laboratory Management System,REF2000053,1600.37,,481199.80,Software Expense,WITHDRAWAL
+2023-08-28,Bacterial Culture Testing,WIR2000054,,1179.09,482378.89,Lab Revenue,DEPOSIT
+2023-08-29,Claim Reimbursement - United,WIR2000055,,8967.38,491346.27,Insurance Revenue,DEPOSIT
+2023-08-31,Bulk Medication Purchase Resale,DEP2000056,,450.23,491796.50,Pharmacy Revenue,DEPOSIT
+2023-09-01,OTC Medication Sales,WIR2000057,,6374.90,498171.40,Pharmacy Revenue,DEPOSIT
+2023-09-03,Lab Services - Blood Panel,EFT2000058,,535.44,498706.84,Lab Revenue,DEPOSIT
+2023-09-05,Medicaid State Reimbursement,WIR2000059,,15732.50,514439.34,Insurance Revenue,DEPOSIT
+2023-09-06,Roof Repair Work,CHK2000060,2902.68,,511536.66,Maintenance,WITHDRAWAL
+2023-09-07,Radiology Services Payment,WIR2000061,,401.85,511938.51,Patient Revenue,DEPOSIT
+2023-09-08,Clinic Visit Payment,REF2000062,,1299.99,513238.50,Patient Revenue,DEPOSIT
+2023-09-10,Claim Reimbursement - Aetna Plus,EFT2000063,,5931.48,519169.98,Insurance Revenue,DEPOSIT
+2023-09-12,Revenue Cycle Payroll,EFT2000064,13437.98,,505732.00,Salary Expense,WITHDRAWAL
+2023-09-13,Patient Co-pay - Office Visit,INV2000065,,376.35,506108.35,Patient Revenue,DEPOSIT
+2023-09-15,Lab Services - Blood Panel,DEP2000066,,2439.79,508548.14,Lab Revenue,DEPOSIT
+2023-09-17,Infusion Therapy Charges,CHK2000067,,557.13,509105.27,Pharmacy Revenue,DEPOSIT
+2023-09-18,Rehabilitation Services,DEP2000068,,705.93,509811.20,Patient Revenue,DEPOSIT
+2023-09-19,Elevator Maintenance,TXN2000069,821.07,,508990.13,Maintenance,WITHDRAWAL
+2023-09-21,Vision Plan Reimbursement,TXN2000070,,18810.95,527801.08,Insurance Revenue,DEPOSIT
+2023-09-24,Pharmacy Copay,TXN2000071,,291.67,528092.75,Patient Revenue,DEPOSIT
+2023-09-25,Claim Reimbursement - Aetna Plus,TXN2000072,,4407.91,532500.66,Insurance Revenue,DEPOSIT
+2023-09-27,Infusion Therapy Charges,DEP2000073,,6049.74,538550.40,Pharmacy Revenue,DEPOSIT
+2023-09-28,In-House Pharmacy - Script Fills,TXN2000074,,2782.79,541333.19,Pharmacy Revenue,DEPOSIT
+2023-09-30,Vision Plan Reimbursement,EFT2000075,,8307.14,549640.33,Insurance Revenue,DEPOSIT
+2023-10-01,Medicaid State Reimbursement,INV2000076,,1964.82,551605.15,Insurance Revenue,DEPOSIT
+2023-10-02,Patient Co-pay - Office Visit,EFT2000077,,1347.07,552952.22,Patient Revenue,DEPOSIT
+2023-10-03,Surgical Procedure Payment,EFT2000078,,2416.51,555368.73,Patient Revenue,DEPOSIT
+2023-10-04,Telephone System Bill,WIR2000079,1209.61,,554159.12,Utilities,WITHDRAWAL
+2023-10-05,Claim Reimbursement - Cigna Select,REF2000080,,11037.07,565196.19,Insurance Revenue,DEPOSIT
+2023-10-06,Security Team Payroll,CHK2000081,15737.26,,549458.93,Salary Expense,WITHDRAWAL
+2023-10-08,Claim Reimbursement - Cigna Select,CHK2000082,,14229.66,563688.59,Insurance Revenue,DEPOSIT
+2023-10-10,Claim Reimbursement - Aetna Plus,WIR2000083,,4540.05,568228.64,Insurance Revenue,DEPOSIT
+2023-10-13,Corporate Income Tax,WIR2000084,8188.39,,560040.25,Tax Payment,WITHDRAWAL
+2023-10-15,Molecular Testing Services,ACH2000085,,1801.80,561842.05,Lab Revenue,DEPOSIT
+2023-10-18,Immunization Fee,TXN2000086,,2602.39,564444.44,Patient Revenue,DEPOSIT
+2023-10-19,IT Department Payroll,INV2000087,9358.77,,555085.67,Salary Expense,WITHDRAWAL
+2023-10-20,Claim Reimbursement - BCBS,DEP2000088,,3849.49,558935.16,Insurance Revenue,DEPOSIT
+2023-10-22,Estimated Tax Installment,ACH2000089,7773.89,,551161.27,Tax Payment,WITHDRAWAL
+2023-10-27,Administrative Staff Payroll,INV2000090,14879.06,,536282.21,Salary Expense,WITHDRAWAL
+2023-10-28,Lipid Panel Analysis,DEP2000091,,3641.36,539923.57,Lab Revenue,DEPOSIT
+2023-10-29,Plumbing Repairs,TXN2000092,2499.67,,537423.90,Maintenance,WITHDRAWAL
+2023-10-30,Claim Reimbursement - Anthem PPO,INV2000093,,14113.70,551537.60,Insurance Revenue,DEPOSIT
+2023-10-31,Rehabilitation Services,INV2000094,,2106.32,553643.92,Patient Revenue,DEPOSIT
+2023-11-01,Pharmacy Copay,INV2000095,,1262.46,554906.38,Patient Revenue,DEPOSIT
+2023-11-02,Controlled Substance Dispensing,CHK2000096,,4067.00,558973.38,Pharmacy Revenue,DEPOSIT
+2023-11-06,Claim Reimbursement - Cigna Select,REF2000097,,12070.57,571043.95,Insurance Revenue,DEPOSIT
+2023-11-07,Automated External Defibrillator,CHK2000098,32601.63,,538442.32,Equipment,WITHDRAWAL
+2023-11-08,Security Team Payroll,INV2000099,4360.48,,534081.84,Salary Expense,WITHDRAWAL
+2023-11-09,Telehealth Platform License,INV2000100,1943.42,,532138.42,Software Expense,WITHDRAWAL
+2023-11-10,Claim Reimbursement - BCBS,REF2000101,,2685.87,534824.29,Insurance Revenue,DEPOSIT
+2023-11-11,Claim Reimbursement - Cigna Select,WIR2000102,,2358.72,537183.01,Insurance Revenue,DEPOSIT
+2023-11-12,Custom Compounding Sales,REF2000103,,750.10,537933.11,Pharmacy Revenue,DEPOSIT
+2023-11-17,Administrative Staff Payroll,DEP2000104,13162.50,,524770.61,Salary Expense,WITHDRAWAL
+2023-11-19,Surgical Procedure Payment,INV2000105,,2023.91,526794.52,Patient Revenue,DEPOSIT
+2023-11-22,Custom Compounding Sales,DEP2000106,,3845.07,530639.59,Pharmacy Revenue,DEPOSIT
+2023-11-24,Specialist Consultation,DEP2000107,,1475.28,532114.87,Patient Revenue,DEPOSIT
+2023-11-25,Specialty Pharma Distribution,INV2000108,,1164.25,533279.12,Pharmacy Revenue,DEPOSIT
+2023-11-28,Surgical Procedure Payment,WIR2000109,,915.61,534194.73,Patient Revenue,DEPOSIT
+2023-11-29,Bacterial Culture Testing,CHK2000110,,3958.48,538153.21,Lab Revenue,DEPOSIT
+2023-11-30,Lab Work Payment,WIR2000111,,526.79,538680.00,Patient Revenue,DEPOSIT
+2023-12-01,Digital Radiography System,INV2000112,4211.15,,534468.85,Equipment,WITHDRAWAL
+2023-12-02,Electric Utility Bill,DEP2000113,2146.89,,532321.96,Utilities,WITHDRAWAL
+2023-12-04,Vision Plan Reimbursement,CHK2000114,,13025.87,545347.83,Insurance Revenue,DEPOSIT
+2023-12-06,Prior Year Tax Settlement,TXN2000115,7613.43,,537734.40,Tax Payment,WITHDRAWAL
+2023-12-08,Sales Tax Remittance,ACH2000116,5269.49,,532464.91,Tax Payment,WITHDRAWAL
+2023-12-11,Claim Reimbursement - Cigna Select,CHK2000117,,19333.26,551798.17,Insurance Revenue,DEPOSIT
+2023-12-12,Patient Co-pay - Office Visit,TXN2000118,,1989.01,553787.18,Patient Revenue,DEPOSIT
+2023-12-13,Antibiotic Prep Charges,WIR2000119,,2070.83,555858.01,Pharmacy Revenue,DEPOSIT
+2023-12-15,Radiology Services Payment,TXN2000120,,1408.12,557266.13,Patient Revenue,DEPOSIT
+2023-12-17,Antibiotic Prep Charges,WIR2000121,,2119.30,559385.43,Pharmacy Revenue,DEPOSIT
+2023-12-18,Sterile Needle and Syringe Stock,EFT2000122,1601.10,,557784.33,Medical Supplies,WITHDRAWAL
+2023-12-20,Clinic Visit Payment,WIR2000123,,2441.72,560226.05,Patient Revenue,DEPOSIT
+2023-12-21,Claim Reimbursement - United,WIR2000124,,14159.00,574385.05,Insurance Revenue,DEPOSIT
+2023-12-25,Medicaid State Reimbursement,CHK2000125,,17134.46,591519.51,Insurance Revenue,DEPOSIT
+2023-12-28,Medicare Reimbursement - Part B,TXN2000126,,5897.41,597416.92,Insurance Revenue,DEPOSIT
+2023-12-29,Patient Co-pay - Office Visit,EFT2000127,,1940.67,599357.59,Patient Revenue,DEPOSIT
+2023-12-30,Claim Reimbursement - Anthem PPO,INV2000128,,9363.11,608720.70,Insurance Revenue,DEPOSIT
+2023-12-31,Surgical Procedure Payment,EFT2000129,,558.83,609279.53,Patient Revenue,DEPOSIT
+2024-01-01,Clinic Visit Payment,CHK2000130,,2273.54,611553.07,Patient Revenue,DEPOSIT
+2024-01-02,Medical Equipment Calibration,INV2000131,1738.85,,609814.22,Maintenance,WITHDRAWAL
+2024-01-03,Mental Health Coverage Reimbursement,DEP2000132,,7800.04,617614.26,Insurance Revenue,DEPOSIT
+2024-01-05,Housekeeping Payroll,REF2000133,13621.86,,603992.40,Salary Expense,WITHDRAWAL
+2024-01-06,Broadband Internet Service,CHK2000134,3456.14,,600536.26,Utilities,WITHDRAWAL
+2024-01-08,Suture and Staple Supplies,EFT2000135,2412.04,,598124.22,Medical Supplies,WITHDRAWAL
+2024-01-09,Specialty Pharma Distribution,REF2000136,,2184.04,600308.26,Pharmacy Revenue,DEPOSIT
+2024-01-12,Infusion Line Supplies,REF2000137,3398.32,,596909.94,Medical Supplies,WITHDRAWAL
+2024-01-13,Claim Reimbursement - BCBS,ACH2000138,,5745.78,602655.72,Insurance Revenue,DEPOSIT
+2024-01-14,Clinic Visit Payment,INV2000139,,567.35,603223.07,Patient Revenue,DEPOSIT
+2024-01-15,Vision Plan Reimbursement,ACH2000140,,3161.96,606385.03,Insurance Revenue,DEPOSIT
+2024-01-16,Business License Fee,REF2000141,9111.81,,597273.22,Tax Payment,WITHDRAWAL
+2024-01-17,Mental Health Coverage Reimbursement,EFT2000142,,8823.08,606096.30,Insurance Revenue,DEPOSIT
+2024-01-19,FICA Payroll Tax,WIR2000143,2975.79,,603120.51,Tax Payment,WITHDRAWAL
+2024-01-21,Hospital Grade Beds,EFT2000144,8518.16,,594602.35,Medical Supplies,WITHDRAWAL
+2024-01-22,Immunization Fee,WIR2000145,,851.36,595453.71,Patient Revenue,DEPOSIT
+2024-01-23,Security Team Payroll,REF2000146,12668.02,,582785.69,Salary Expense,WITHDRAWAL
+2024-01-24,Claim Reimbursement - Aetna Plus,DEP2000147,,9687.85,592473.54,Insurance Revenue,DEPOSIT
+2024-01-26,Claim Reimbursement - United,REF2000148,,10713.71,603187.25,Insurance Revenue,DEPOSIT
+2024-01-27,Clinic Space Sublease,EFT2000149,9650.48,,593536.77,Rent Expense,WITHDRAWAL
+2024-01-28,Surgical Procedure Payment,TXN2000150,,685.79,594222.56,Patient Revenue,DEPOSIT
+2024-01-30,Lab Work Payment,WIR2000151,,1625.14,595847.70,Patient Revenue,DEPOSIT
+2024-01-31,Security Team Payroll,CHK2000152,8074.85,,587772.85,Salary Expense,WITHDRAWAL
+2024-02-03,Claim Reimbursement - Humana Choice,CHK2000153,,16261.71,604034.56,Insurance Revenue,DEPOSIT
+2024-02-04,Specimen Processing Fees,CHK2000154,,932.77,604967.33,Lab Revenue,DEPOSIT
+2024-02-05,Lab Work Payment,ACH2000155,,2648.08,607615.41,Patient Revenue,DEPOSIT
+2024-02-06,Claim Reimbursement - Anthem PPO,DEP2000156,,6273.53,613888.94,Insurance Revenue,DEPOSIT
+2024-02-08,Claim Reimbursement - Aetna Plus,TXN2000157,,5509.83,619398.77,Insurance Revenue,DEPOSIT
+2024-02-10,Claim Reimbursement - Cigna Select,TXN2000158,,19173.17,638571.94,Insurance Revenue,DEPOSIT
+2024-02-13,Security Team Payroll,REF2000159,15960.88,,622611.06,Salary Expense,WITHDRAWAL
+2024-02-16,Mental Health Coverage Reimbursement,REF2000160,,15338.93,637949.99,Insurance Revenue,DEPOSIT
+2024-02-17,Suture and Staple Supplies,EFT2000161,3894.77,,634055.22,Medical Supplies,WITHDRAWAL
+2024-02-18,Wound Care Dressing Supply,CHK2000162,1875.79,,632179.43,Medical Supplies,WITHDRAWAL
+2024-02-19,Cloud Data Backup Service,CHK2000163,1997.30,,630182.13,Software Expense,WITHDRAWAL
+2024-02-20,Specialty Pharma Distribution,CHK2000164,,4123.15,634305.28,Pharmacy Revenue,DEPOSIT
+2024-02-21,IT Department Payroll,WIR2000165,7943.69,,626361.59,Salary Expense,WITHDRAWAL
+2024-02-24,Revenue Cycle Payroll,WIR2000166,16751.89,,609609.70,Salary Expense,WITHDRAWAL
+2024-02-29,Vision Plan Reimbursement,INV2000167,,11999.57,621609.27,Insurance Revenue,DEPOSIT
+2024-03-01,Infusion Therapy Charges,INV2000168,,3478.86,625088.13,Pharmacy Revenue,DEPOSIT
+2024-03-02,Immunization Fee,EFT2000169,,2227.62,627315.75,Patient Revenue,DEPOSIT
+2024-03-03,Infusion Therapy Charges,CHK2000170,,4239.82,631555.57,Pharmacy Revenue,DEPOSIT
+2024-03-04,Claim Reimbursement - BCBS,CHK2000171,,4783.18,636338.75,Insurance Revenue,DEPOSIT
+2024-03-07,Specialist Consultation,CHK2000172,,402.73,636741.48,Patient Revenue,DEPOSIT
+2024-03-09,Custom Compounding Sales,DEP2000173,,5983.25,642724.73,Pharmacy Revenue,DEPOSIT
+2024-03-11,Claim Reimbursement - Cigna Select,TXN2000174,,18484.47,661209.20,Insurance Revenue,DEPOSIT
+2024-03-12,Roof Repair Work,CHK2000175,3874.66,,657334.54,Maintenance,WITHDRAWAL
+2024-03-13,Personal Protective Equipment,WIR2000176,2571.21,,654763.33,Medical Supplies,WITHDRAWAL
+2024-03-14,Medicaid State Reimbursement,DEP2000177,,4672.63,659435.96,Insurance Revenue,DEPOSIT
+2024-03-15,Antibiotic Prep Charges,TXN2000178,,6264.42,665700.38,Pharmacy Revenue,DEPOSIT
+2024-03-16,Revenue Cycle Payroll,DEP2000179,13079.67,,652620.71,Salary Expense,WITHDRAWAL
+2024-03-19,Natural Gas Heating,DEP2000180,3067.13,,649553.58,Utilities,WITHDRAWAL
+2024-03-22,Rehabilitation Services,REF2000181,,695.73,650249.31,Patient Revenue,DEPOSIT
+2024-03-23,Immunization Fee,WIR2000182,,1926.58,652175.89,Patient Revenue,DEPOSIT
+2024-03-25,State Income Tax Withholding,REF2000183,2239.75,,649936.14,Tax Payment,WITHDRAWAL
+2024-03-26,Building Lease Payment,INV2000184,7605.68,,642330.46,Rent Expense,WITHDRAWAL
+2024-03-27,Water and Sewer Services,CHK2000185,1157.33,,641173.13,Utilities,WITHDRAWAL
+2024-03-30,Claim Reimbursement - Cigna Select,CHK2000186,,4402.29,645575.42,Insurance Revenue,DEPOSIT
+2024-04-01,In-House Pharmacy - Script Fills,CHK2000187,,380.18,645955.60,Pharmacy Revenue,DEPOSIT
+2024-04-04,Rapid Antigen Testing,INV2000188,,2255.37,648210.97,Lab Revenue,DEPOSIT
+2024-04-05,Elevator Maintenance,CHK2000189,3070.78,,645140.19,Maintenance,WITHDRAWAL
+2024-04-08,Immunization Fee,TXN2000190,,349.04,645489.23,Patient Revenue,DEPOSIT
+2024-04-13,Diagnostic Test Kit Purchase,TXN2000191,8095.64,,637393.59,Medical Supplies,WITHDRAWAL
+2024-04-15,Clinic Visit Payment,CHK2000192,,1763.62,639157.21,Patient Revenue,DEPOSIT
+2024-04-18,Lab Technician Payroll,CHK2000193,7487.15,,631670.06,Salary Expense,WITHDRAWAL
+2024-04-19,Emergency Department Bill,ACH2000194,,2615.58,634285.64,Patient Revenue,DEPOSIT
+2024-04-20,Cybersecurity Training,CHK2000195,1058.00,,633227.64,Software Expense,WITHDRAWAL
+2024-04-21,Claim Reimbursement - BCBS,EFT2000196,,13866.30,647093.94,Insurance Revenue,DEPOSIT
+2024-04-22,Claim Reimbursement - United,ACH2000197,,5351.92,652445.86,Insurance Revenue,DEPOSIT
+2024-04-23,Emergency Department Bill,ACH2000198,,2114.42,654560.28,Patient Revenue,DEPOSIT
+2024-04-24,Lab Work Payment,DEP2000199,,1963.27,656523.55,Patient Revenue,DEPOSIT
+2024-04-30,Medicaid State Reimbursement,WIR2000200,,17132.21,673655.76,Insurance Revenue,DEPOSIT
+2024-05-02,Parking Lot Lease,WIR2000201,8222.82,,665432.94,Rent Expense,WITHDRAWAL
+2024-05-03,Emergency Department Bill,REF2000202,,2352.54,667785.48,Patient Revenue,DEPOSIT
+2024-05-04,Emergency Department Bill,DEP2000203,,2703.18,670488.66,Patient Revenue,DEPOSIT
+2024-05-05,Lab Work Payment,REF2000204,,2521.23,673009.89,Patient Revenue,DEPOSIT
+2024-05-08,Administrative Staff Payroll,INV2000205,17467.77,,655542.12,Salary Expense,WITHDRAWAL
+2024-05-09,Specialist Consultation,ACH2000206,,512.46,656054.58,Patient Revenue,DEPOSIT
+2024-05-10,Claim Reimbursement - United,WIR2000207,,18694.83,674749.41,Insurance Revenue,DEPOSIT
+2024-05-11,Emergency Department Bill,TXN2000208,,841.59,675591.00,Patient Revenue,DEPOSIT
+2024-05-12,Claim Reimbursement - Humana Choice,WIR2000209,,13565.23,689156.23,Insurance Revenue,DEPOSIT
+2024-05-13,Claim Reimbursement - United,INV2000210,,3181.76,692337.99,Insurance Revenue,DEPOSIT
+2024-05-18,Prior Year Tax Settlement,ACH2000211,13871.21,,678466.78,Tax Payment,WITHDRAWAL
+2024-05-19,Contractor Medical Personnel,WIR2000212,16630.58,,661836.20,Salary Expense,WITHDRAWAL
+2024-05-20,Clinic Space Sublease,INV2000213,9763.75,,652072.45,Rent Expense,WITHDRAWAL
+2024-05-21,Surgical Procedure Payment,WIR2000214,,2355.86,654428.31,Patient Revenue,DEPOSIT
+2024-05-22,Claim Reimbursement - United,CHK2000215,,2551.05,656979.36,Insurance Revenue,DEPOSIT
+2024-05-23,Vaccine Administration Fees,DEP2000216,,1639.93,658619.29,Pharmacy Revenue,DEPOSIT
+2024-05-24,Medicaid State Reimbursement,ACH2000217,,11076.05,669695.34,Insurance Revenue,DEPOSIT
+2024-05-25,Patient Monitoring Equipment,REF2000218,5741.37,,663953.97,Medical Supplies,WITHDRAWAL
+2024-05-28,Fire System Testing,INV2000219,787.12,,663166.85,Maintenance,WITHDRAWAL
+2024-05-29,Clinic Visit Payment,INV2000220,,2661.01,665827.86,Patient Revenue,DEPOSIT
+2024-05-31,Infusion Line Supplies,TXN2000221,6948.90,,658878.96,Medical Supplies,WITHDRAWAL
+2024-06-01,Claim Reimbursement - Aetna Plus,TXN2000222,,16185.14,675064.10,Insurance Revenue,DEPOSIT
+2024-06-02,Specialist Consultation,ACH2000223,,2889.31,677953.41,Patient Revenue,DEPOSIT
+2024-06-04,Claim Reimbursement - Aetna Plus,DEP2000224,,6830.60,684784.01,Insurance Revenue,DEPOSIT
+2024-06-05,Claim Reimbursement - United,REF2000225,,5504.26,690288.27,Insurance Revenue,DEPOSIT
+2024-06-06,Allergy Panel Testing,REF2000226,,1546.72,691834.99,Lab Revenue,DEPOSIT
+2024-06-07,Claim Reimbursement - Cigna Select,CHK2000227,,6408.62,698243.61,Insurance Revenue,DEPOSIT
+2024-06-09,OTC Medication Sales,INV2000228,,1483.07,699726.68,Pharmacy Revenue,DEPOSIT
+2024-06-12,Molecular Testing Services,INV2000229,,612.58,700339.26,Lab Revenue,DEPOSIT
+2024-06-14,Claim Reimbursement - United,CHK2000230,,8521.46,708860.72,Insurance Revenue,DEPOSIT
+2024-06-15,Infusion Therapy Charges,REF2000231,,4926.81,713787.53,Pharmacy Revenue,DEPOSIT
+2024-06-16,Vision Plan Reimbursement,CHK2000232,,12631.75,726419.28,Insurance Revenue,DEPOSIT
+2024-06-17,Vaccine Administration Fees,ACH2000233,,1236.09,727655.37,Pharmacy Revenue,DEPOSIT
+2024-06-18,Medicare Reimbursement - Part B,REF2000234,,15567.27,743222.64,Insurance Revenue,DEPOSIT
+2024-06-19,Janitorial Services,WIR2000235,3922.43,,739300.21,Maintenance,WITHDRAWAL
+2024-06-21,Claim Reimbursement - BCBS,EFT2000236,,17212.19,756512.40,Insurance Revenue,DEPOSIT
+2024-06-23,Claim Reimbursement - Aetna Plus,DEP2000237,,17598.97,774111.37,Insurance Revenue,DEPOSIT
+2024-06-25,Surgical Light Arrays,WIR2000238,3184.37,,770927.00,Equipment,WITHDRAWAL
+2024-06-26,Patient Co-pay - Office Visit,INV2000239,,2443.47,773370.47,Patient Revenue,DEPOSIT
+2024-06-27,Radiology Services Payment,REF2000240,,554.77,773925.24,Patient Revenue,DEPOSIT
+2024-06-30,Emergency Department Bill,WIR2000241,,745.56,774670.80,Patient Revenue,DEPOSIT
+2024-07-02,Patient Monitoring Equipment,INV2000242,5008.58,,769662.22,Medical Supplies,WITHDRAWAL
+2024-07-03,Medical Gas Supply,TXN2000243,3156.41,,766505.81,Utilities,WITHDRAWAL
+2024-07-04,Specialist Consultation,DEP2000244,,791.84,767297.65,Patient Revenue,DEPOSIT
+2024-07-05,IT Department Payroll,REF2000245,14408.24,,752889.41,Salary Expense,WITHDRAWAL
+2024-07-06,Lab Technician Payroll,ACH2000246,6426.61,,746462.80,Salary Expense,WITHDRAWAL
+2024-07-07,FICA Payroll Tax,DEP2000247,8494.00,,737968.80,Tax Payment,WITHDRAWAL
+2024-07-08,Rehabilitation Services,WIR2000248,,1839.51,739808.31,Patient Revenue,DEPOSIT
+2024-07-10,Pest Management Service,TXN2000249,3413.52,,736394.79,Maintenance,WITHDRAWAL
+2024-07-14,Security and Antivirus,WIR2000250,2447.02,,733947.77,Software Expense,WITHDRAWAL
+2024-07-15,Waste Management Service,CHK2000251,3176.32,,730771.45,Utilities,WITHDRAWAL
+2024-07-16,Claim Reimbursement - BCBS,WIR2000252,,4661.49,735432.94,Insurance Revenue,DEPOSIT
+2024-07-17,Respiratory Equipment,WIR2000253,626.92,,734806.02,Medical Supplies,WITHDRAWAL
+2024-07-18,Injectable Medication Sales,DEP2000254,,1461.87,736267.89,Pharmacy Revenue,DEPOSIT
+2024-07-19,Specialist Consultation,DEP2000255,,1666.19,737934.08,Patient Revenue,DEPOSIT
+2024-07-20,Claim Reimbursement - United,CHK2000256,,13335.19,751269.27,Insurance Revenue,DEPOSIT
+2024-07-21,Surgical Procedure Payment,CHK2000257,,1587.77,752857.04,Patient Revenue,DEPOSIT
+2024-07-22,Pharmacy Copay,INV2000258,,1251.86,754108.90,Patient Revenue,DEPOSIT
+2024-07-24,Registered Nurse Payroll,ACH2000259,4071.56,,750037.34,Salary Expense,WITHDRAWAL
+2024-07-25,OTC Medication Sales,DEP2000260,,240.31,750277.65,Pharmacy Revenue,DEPOSIT
+2024-07-26,Specialty Pharma Distribution,ACH2000261,,5570.29,755847.94,Pharmacy Revenue,DEPOSIT
+2024-08-01,Drug Screening Services,INV2000262,,1612.77,757460.71,Lab Revenue,DEPOSIT
+2024-08-03,Immunization Fee,EFT2000263,,2024.05,759484.76,Patient Revenue,DEPOSIT
+2024-08-04,Patient Co-pay - Office Visit,REF2000264,,2115.70,761600.46,Patient Revenue,DEPOSIT
+2024-08-05,Custom Compounding Sales,TXN2000265,,4003.86,765604.32,Pharmacy Revenue,DEPOSIT
+2024-08-08,Medicare Reimbursement - Part B,ACH2000266,,13512.34,779116.66,Insurance Revenue,DEPOSIT
+2024-08-10,Lab Technician Payroll,INV2000267,8316.56,,770800.10,Salary Expense,WITHDRAWAL
+2024-08-12,Drug Screening Services,REF2000268,,3991.10,774791.20,Lab Revenue,DEPOSIT
+2024-08-14,Medicare Reimbursement - Part B,REF2000269,,6219.96,781011.16,Insurance Revenue,DEPOSIT
+2024-08-17,Wound Care Dressing Supply,EFT2000270,5271.92,,775739.24,Medical Supplies,WITHDRAWAL
+2024-08-18,Plumbing Repairs,TXN2000271,3795.47,,771943.77,Maintenance,WITHDRAWAL
+2024-08-21,Administrative Staff Payroll,WIR2000272,4607.58,,767336.19,Salary Expense,WITHDRAWAL
+2024-08-22,Lab Services - Blood Panel,ACH2000273,,596.70,767932.89,Lab Revenue,DEPOSIT
+2024-08-23,Vision Plan Reimbursement,INV2000274,,8746.91,776679.80,Insurance Revenue,DEPOSIT
+2024-08-24,Administrative Staff Payroll,CHK2000275,16521.48,,760158.32,Salary Expense,WITHDRAWAL
+2024-08-26,Security Team Payroll,CHK2000276,17662.70,,742495.62,Salary Expense,WITHDRAWAL
+2024-08-27,Radiology Services Payment,DEP2000277,,2767.90,745263.52,Patient Revenue,DEPOSIT
+2024-08-28,IT Infrastructure Lease,EFT2000278,6209.46,,739054.06,Rent Expense,WITHDRAWAL
+2024-08-29,Vision Plan Reimbursement,CHK2000279,,14535.04,753589.10,Insurance Revenue,DEPOSIT
+2024-08-30,Bacterial Culture Testing,EFT2000280,,3589.97,757179.07,Lab Revenue,DEPOSIT
+2024-08-31,Waste Management Service,EFT2000281,1801.87,,755377.20,Utilities,WITHDRAWAL
+2024-09-01,Physician Payroll,INV2000282,5622.01,,749755.19,Salary Expense,WITHDRAWAL
+2024-09-03,Medicare Reimbursement - Part B,EFT2000283,,4417.52,754172.71,Insurance Revenue,DEPOSIT
+2024-09-06,Surgical Instrument Sterilization,CHK2000284,4646.88,,749525.83,Medical Supplies,WITHDRAWAL
+2024-09-07,Claim Reimbursement - Anthem PPO,EFT2000285,,15454.00,764979.83,Insurance Revenue,DEPOSIT
+2024-09-10,Medical Equipment Calibration,WIR2000286,2914.87,,762064.96,Maintenance,WITHDRAWAL
+2024-09-11,Lab Services - Blood Panel,TXN2000287,,2386.68,764451.64,Lab Revenue,DEPOSIT
+2024-09-12,Vision Plan Reimbursement,ACH2000288,,3447.74,767899.38,Insurance Revenue,DEPOSIT
+2024-09-13,Histopathology Analysis,TXN2000289,,1168.76,769068.14,Lab Revenue,DEPOSIT
+2024-09-14,Radiology Services Payment,EFT2000290,,2879.24,771947.38,Patient Revenue,DEPOSIT
+2024-09-16,Rehabilitation Services,CHK2000291,,2120.75,774068.13,Patient Revenue,DEPOSIT
+2024-09-17,Claim Reimbursement - United,DEP2000292,,9168.36,783236.49,Insurance Revenue,DEPOSIT
+2024-09-18,Clinic Visit Payment,INV2000293,,2872.24,786108.73,Patient Revenue,DEPOSIT
+2024-09-19,Lipid Panel Analysis,CHK2000294,,334.04,786442.77,Lab Revenue,DEPOSIT
+2024-09-22,Bacterial Culture Testing,REF2000295,,800.28,787243.05,Lab Revenue,DEPOSIT
+2024-09-23,Lab Technician Payroll,CHK2000296,14898.03,,772345.02,Salary Expense,WITHDRAWAL
+2024-09-24,Claim Reimbursement - BCBS,CHK2000297,,11093.82,783438.84,Insurance Revenue,DEPOSIT
+2024-09-25,Allergy Panel Testing,EFT2000298,,1445.37,784884.21,Lab Revenue,DEPOSIT
+2024-09-28,Radiology Services Payment,CHK2000299,,1301.62,786185.83,Patient Revenue,DEPOSIT
+2024-09-29,Histopathology Analysis,TXN2000300,,3270.81,789456.64,Lab Revenue,DEPOSIT
+2024-09-30,Patient Portal License,TXN2000301,387.77,,789068.87,Software Expense,WITHDRAWAL
+2024-10-01,Claim Reimbursement - Aetna Plus,WIR2000302,,13797.86,802866.73,Insurance Revenue,DEPOSIT
+2024-10-03,Allergy Panel Testing,REF2000303,,1871.29,804738.02,Lab Revenue,DEPOSIT
+2024-10-05,Claim Reimbursement - United,REF2000304,,12864.08,817602.10,Insurance Revenue,DEPOSIT
+2024-10-07,Claim Reimbursement - Cigna Select,TXN2000305,,4778.45,822380.55,Insurance Revenue,DEPOSIT
+2024-10-08,Mental Health Coverage Reimbursement,WIR2000306,,1800.31,824180.86,Insurance Revenue,DEPOSIT
+2024-10-09,Card Processing Fee,WIR2000307,180.95,,823999.91,Bank Fees,WITHDRAWAL
+2024-10-10,Claim Reimbursement - United,WIR2000308,,3303.96,827303.87,Insurance Revenue,DEPOSIT
+2024-10-14,ICU Ventilator Unit,DEP2000309,4770.32,,822533.55,Equipment,WITHDRAWAL
+2024-10-15,Vision Plan Reimbursement,EFT2000310,,4654.33,827187.88,Insurance Revenue,DEPOSIT
+2024-10-19,Claim Reimbursement - Aetna Plus,REF2000311,,7563.50,834751.38,Insurance Revenue,DEPOSIT
+2024-10-21,Digital Microscope System,WIR2000312,26291.29,,808460.09,Equipment,WITHDRAWAL
+2024-10-22,Molecular Testing Services,EFT2000313,,2197.35,810657.44,Lab Revenue,DEPOSIT
+2024-10-24,Elevator Maintenance,TXN2000314,3336.09,,807321.35,Maintenance,WITHDRAWAL
+2024-10-25,IT Department Payroll,INV2000315,16580.91,,790740.44,Salary Expense,WITHDRAWAL
+2024-10-28,Vaccine Administration Fees,DEP2000316,,4839.26,795579.70,Pharmacy Revenue,DEPOSIT
+2024-10-31,Elevator Maintenance,ACH2000317,2283.37,,793296.33,Maintenance,WITHDRAWAL
+2024-11-01,Telehealth Platform License,WIR2000318,2762.01,,790534.32,Software Expense,WITHDRAWAL
+2024-11-02,Mental Health Coverage Reimbursement,DEP2000319,,9784.12,800318.44,Insurance Revenue,DEPOSIT
+2024-11-03,Pharmacy Copay,CHK2000320,,961.90,801280.34,Patient Revenue,DEPOSIT
+2024-11-04,Medical Billing Software,EFT2000321,2793.22,,798487.12,Software Expense,WITHDRAWAL
+2024-11-06,Housekeeping Payroll,WIR2000322,14137.56,,784349.56,Salary Expense,WITHDRAWAL
+2024-11-07,Patient Vitals Monitor,EFT2000323,16239.51,,768110.05,Equipment,WITHDRAWAL
+2024-11-08,Patient Co-pay - Office Visit,ACH2000324,,1372.64,769482.69,Patient Revenue,DEPOSIT
+2024-11-09,Immunization Fee,EFT2000325,,1561.79,771044.48,Patient Revenue,DEPOSIT
+2024-11-10,Pharmacy Copay,INV2000326,,1914.26,772958.74,Patient Revenue,DEPOSIT
+2024-11-12,Wound Care Dressing Supply,INV2000327,7175.99,,765782.75,Medical Supplies,WITHDRAWAL
+2024-11-13,Registered Nurse Payroll,EFT2000328,9037.50,,756745.25,Salary Expense,WITHDRAWAL
+2024-11-14,Lipid Panel Analysis,DEP2000329,,2477.35,759222.60,Lab Revenue,DEPOSIT
+2024-11-15,Molecular Testing Services,TXN2000330,,3646.58,762869.18,Lab Revenue,DEPOSIT
+2024-11-18,Medicare Reimbursement - Part B,DEP2000331,,3451.41,766320.59,Insurance Revenue,DEPOSIT
+2024-11-20,Mental Health Coverage Reimbursement,REF2000332,,16667.44,782988.03,Insurance Revenue,DEPOSIT
+2024-11-21,Emergency Department Bill,WIR2000333,,689.09,783677.12,Patient Revenue,DEPOSIT
+2024-11-22,Operating to Reserve Fund,DEP2000334,,16516.55,800193.67,Transfer,TRANSFER
+2024-11-23,Suture and Staple Supplies,EFT2000335,897.40,,799296.27,Medical Supplies,WITHDRAWAL
+2024-11-25,OTC Medication Sales,REF2000336,,1990.64,801286.91,Pharmacy Revenue,DEPOSIT
+2024-11-27,Patient Monitoring Equipment,EFT2000337,2085.71,,799201.20,Medical Supplies,WITHDRAWAL
+2024-11-29,Patient Monitoring Equipment,EFT2000338,2800.90,,796400.30,Medical Supplies,WITHDRAWAL
+2024-11-30,Mental Health Coverage Reimbursement,WIR2000339,,7273.86,803674.16,Insurance Revenue,DEPOSIT
+2024-12-02,Vision Plan Reimbursement,DEP2000340,,2076.31,805750.47,Insurance Revenue,DEPOSIT
+2024-12-03,Claim Reimbursement - BCBS,ACH2000341,,4617.29,810367.76,Insurance Revenue,DEPOSIT
+2024-12-04,Custom Compounding Sales,DEP2000342,,2306.76,812674.52,Pharmacy Revenue,DEPOSIT
+2024-12-05,Radiology Services Payment,EFT2000343,,532.84,813207.36,Patient Revenue,DEPOSIT
+2024-12-06,Claim Reimbursement - Cigna Select,DEP2000344,,19643.33,832850.69,Insurance Revenue,DEPOSIT
+2024-12-07,Antibiotic Prep Charges,EFT2000345,,1768.02,834618.71,Pharmacy Revenue,DEPOSIT
+2024-12-08,Medicaid State Reimbursement,CHK2000346,,15215.65,849834.36,Insurance Revenue,DEPOSIT
+2024-12-09,Rehabilitation Services,INV2000347,,2036.02,851870.38,Patient Revenue,DEPOSIT
+2024-12-10,Equipment Fund Build-Up,TXN2000348,1832.90,,850037.48,Transfer,TRANSFER
+2024-12-13,Surgical Procedure Payment,WIR2000349,,689.65,850727.13,Patient Revenue,DEPOSIT
+2024-12-14,Emergency Department Bill,CHK2000350,,2430.95,853158.08,Patient Revenue,DEPOSIT
+2024-12-15,Contractor Medical Personnel,INV2000351,4571.21,,848586.87,Salary Expense,WITHDRAWAL
+2024-12-16,Emergency Department Bill,CHK2000352,,1197.26,849784.13,Patient Revenue,DEPOSIT
+2024-12-17,Administrative Staff Payroll,REF2000353,10950.06,,838834.07,Salary Expense,WITHDRAWAL
+2024-12-18,Clinic Visit Payment,CHK2000354,,1921.61,840755.68,Patient Revenue,DEPOSIT
+2024-12-20,Water and Sewer Services,DEP2000355,2587.17,,838168.51,Utilities,WITHDRAWAL
+2024-12-23,Bulk Medication Purchase Resale,REF2000356,,2283.91,840452.42,Pharmacy Revenue,DEPOSIT
+2024-12-24,Patient Co-pay - Office Visit,ACH2000357,,1928.11,842380.53,Patient Revenue,DEPOSIT
+2024-12-25,Contractor Medical Personnel,WIR2000358,16877.00,,825503.53,Salary Expense,WITHDRAWAL
+2024-12-26,Claim Reimbursement - BCBS,EFT2000359,,17854.61,843358.14,Insurance Revenue,DEPOSIT
+2024-12-27,Respiratory Equipment,EFT2000360,7035.86,,836322.28,Medical Supplies,WITHDRAWAL
+2025-01-01,Claim Reimbursement - Cigna Select,EFT2000361,,9445.54,845767.82,Insurance Revenue,DEPOSIT
+2025-01-02,Patient Co-pay - Office Visit,REF2000362,,1243.62,847011.44,Patient Revenue,DEPOSIT
+2025-01-04,Clinic Visit Payment,WIR2000363,,52.53,847063.97,Patient Revenue,DEPOSIT
+2025-01-05,Patient Monitoring Equipment,INV2000364,9235.31,,837828.66,Medical Supplies,WITHDRAWAL
+2025-01-07,Vaccine Administration Fees,EFT2000365,,3891.16,841719.82,Pharmacy Revenue,DEPOSIT
+2025-01-09,Backup Power System,WIR2000366,2995.87,,838723.95,Utilities,WITHDRAWAL
+2025-01-10,IT Department Payroll,EFT2000367,15015.33,,823708.62,Salary Expense,WITHDRAWAL
+2025-01-11,Backup Power System,EFT2000368,1594.01,,822114.61,Utilities,WITHDRAWAL
+2025-01-13,IT Department Payroll,DEP2000369,11311.44,,810803.17,Salary Expense,WITHDRAWAL
+2025-01-14,ICU Ventilator Unit,INV2000370,26574.76,,784228.41,Equipment,WITHDRAWAL
+2025-01-18,Resident Doctor Stipend,INV2000371,4412.84,,779815.57,Salary Expense,WITHDRAWAL
+2025-01-20,Diagnostic Test Kit Purchase,WIR2000372,7786.90,,772028.67,Medical Supplies,WITHDRAWAL
+2025-01-21,Telephone System Bill,TXN2000373,3494.35,,768534.32,Utilities,WITHDRAWAL
+2025-01-22,Medicaid State Reimbursement,TXN2000374,,15639.99,784174.31,Insurance Revenue,DEPOSIT
+2025-01-23,Mental Health Coverage Reimbursement,INV2000375,,19536.46,803710.77,Insurance Revenue,DEPOSIT
+2025-01-24,Patient Portal License,EFT2000376,983.10,,802727.67,Software Expense,WITHDRAWAL
+2025-01-26,Clinic Visit Payment,TXN2000377,,795.53,803523.20,Patient Revenue,DEPOSIT
+2025-01-27,IT Department Payroll,DEP2000378,6027.00,,797496.20,Salary Expense,WITHDRAWAL
+2025-01-28,HVAC System Maintenance,DEP2000379,3534.80,,793961.40,Maintenance,WITHDRAWAL
+2025-01-30,Wound Care Dressing Supply,ACH2000380,5156.98,,788804.42,Medical Supplies,WITHDRAWAL
+2025-01-31,Radiology Services Payment,ACH2000381,,1730.74,790535.16,Patient Revenue,DEPOSIT
+2025-02-01,Histopathology Analysis,REF2000382,,2808.51,793343.67,Lab Revenue,DEPOSIT
+2025-02-02,Clinic Visit Payment,WIR2000383,,1872.83,795216.50,Patient Revenue,DEPOSIT
+2025-02-04,Diagnostic Equipment Lease,CHK2000384,8335.78,,786880.72,Rent Expense,WITHDRAWAL
+2025-02-07,Diagnostic Test Kit Purchase,EFT2000385,8804.80,,778075.92,Medical Supplies,WITHDRAWAL
+2025-02-10,Pharmacy Copay,DEP2000386,,1796.02,779871.94,Patient Revenue,DEPOSIT
+2025-02-13,Injectable Medication Sales,INV2000387,,1825.24,781697.18,Pharmacy Revenue,DEPOSIT
+2025-02-14,Rehabilitation Services,ACH2000388,,1519.58,783216.76,Patient Revenue,DEPOSIT
+2025-02-15,Mental Health Coverage Reimbursement,ACH2000389,,14146.30,797363.06,Insurance Revenue,DEPOSIT
+2025-02-18,Medicaid State Reimbursement,WIR2000390,,2398.44,799761.50,Insurance Revenue,DEPOSIT
+2025-02-19,Water and Sewer Services,INV2000391,3342.49,,796419.01,Utilities,WITHDRAWAL
+2025-02-23,Specialist Consultation,WIR2000392,,1220.12,797639.13,Patient Revenue,DEPOSIT
+2025-02-26,Surgical Procedure Payment,DEP2000393,,2942.47,800581.60,Patient Revenue,DEPOSIT
+2025-02-27,Emergency Department Bill,ACH2000394,,591.17,801172.77,Patient Revenue,DEPOSIT
+2025-02-28,Claim Reimbursement - Humana Choice,CHK2000395,,2108.49,803281.26,Insurance Revenue,DEPOSIT
+2025-03-01,Claim Reimbursement - Anthem PPO,WIR2000396,,10106.61,813387.87,Insurance Revenue,DEPOSIT
+2025-03-02,Claim Reimbursement - Humana Choice,EFT2000397,,16951.03,830338.90,Insurance Revenue,DEPOSIT
+2025-03-04,Infusion Therapy Charges,DEP2000398,,621.61,830960.51,Pharmacy Revenue,DEPOSIT
+2025-03-07,Molecular Testing Services,WIR2000399,,956.29,831916.80,Lab Revenue,DEPOSIT
+2025-03-08,Patient Monitoring Equipment,WIR2000400,4611.13,,827305.67,Medical Supplies,WITHDRAWAL
+2025-03-10,Claim Reimbursement - BCBS,ACH2000401,,9580.55,836886.22,Insurance Revenue,DEPOSIT
+2025-03-16,Specimen Processing Fees,DEP2000402,,528.57,837414.79,Lab Revenue,DEPOSIT
+2025-03-18,Specialist Consultation,REF2000403,,801.55,838216.34,Patient Revenue,DEPOSIT
+2025-03-19,Emergency Department Bill,CHK2000404,,944.02,839160.36,Patient Revenue,DEPOSIT
+2025-03-20,Registered Nurse Payroll,REF2000405,6048.47,,833111.89,Salary Expense,WITHDRAWAL
+2025-03-21,Broadband Internet Service,TXN2000406,2780.70,,830331.19,Utilities,WITHDRAWAL
+2025-03-24,Bulk Medication Purchase Resale,TXN2000407,,5677.89,836009.08,Pharmacy Revenue,DEPOSIT
+2025-03-25,Claim Reimbursement - Anthem PPO,TXN2000408,,18229.82,854238.90,Insurance Revenue,DEPOSIT
+2025-03-26,Surgical Procedure Payment,REF2000409,,2701.55,856940.45,Patient Revenue,DEPOSIT
+2025-03-27,Annual Safety Inspection,REF2000410,3073.13,,853867.32,Maintenance,WITHDRAWAL
+2025-03-28,Claim Reimbursement - United,TXN2000411,,4451.11,858318.43,Insurance Revenue,DEPOSIT
+2025-03-29,Claim Reimbursement - Anthem PPO,TXN2000412,,19808.99,878127.42,Insurance Revenue,DEPOSIT
+2025-03-30,Surgical Procedure Payment,EFT2000413,,2015.99,880143.41,Patient Revenue,DEPOSIT
+2025-04-03,PACS Medical Imaging,DEP2000414,1497.09,,878646.32,Software Expense,WITHDRAWAL
+2025-04-04,Emergency Department Bill,CHK2000415,,905.30,879551.62,Patient Revenue,DEPOSIT
+2025-04-05,Administrative Staff Payroll,INV2000416,7980.21,,871571.41,Salary Expense,WITHDRAWAL
+2025-04-06,Sterile Needle and Syringe Stock,DEP2000417,4190.37,,867381.04,Medical Supplies,WITHDRAWAL
+2025-04-07,Immunization Fee,DEP2000418,,880.55,868261.59,Patient Revenue,DEPOSIT
+2025-04-09,IT Department Payroll,WIR2000419,12202.01,,856059.58,Salary Expense,WITHDRAWAL
+2025-04-12,Clinic Visit Payment,DEP2000420,,2286.13,858345.71,Patient Revenue,DEPOSIT
+2025-04-16,Telehealth Platform License,REF2000421,2950.50,,855395.21,Software Expense,WITHDRAWAL
+2025-04-18,Bulk Medication Purchase Resale,ACH2000422,,4409.39,859804.60,Pharmacy Revenue,DEPOSIT
+2025-04-21,Claim Reimbursement - Humana Choice,INV2000423,,15920.94,875725.54,Insurance Revenue,DEPOSIT
+2025-04-22,Claim Reimbursement - United,REF2000424,,17288.10,893013.64,Insurance Revenue,DEPOSIT
+2025-04-23,Lab Work Payment,WIR2000425,,764.18,893777.82,Patient Revenue,DEPOSIT
+2025-04-27,Mental Health Coverage Reimbursement,EFT2000426,,5133.85,898911.67,Insurance Revenue,DEPOSIT
+2025-04-28,Claim Reimbursement - Anthem PPO,WIR2000427,,6110.46,905022.13,Insurance Revenue,DEPOSIT
+2025-04-29,Claim Reimbursement - Anthem PPO,TXN2000428,,16265.45,921287.58,Insurance Revenue,DEPOSIT
+2025-05-01,Mental Health Coverage Reimbursement,TXN2000429,,16910.69,938198.27,Insurance Revenue,DEPOSIT
+2025-05-05,Suture and Staple Supplies,CHK2000430,8211.30,,929986.97,Medical Supplies,WITHDRAWAL
+2025-05-06,Specialist Consultation,CHK2000431,,2285.32,932272.29,Patient Revenue,DEPOSIT
+2025-05-07,Claim Reimbursement - Humana Choice,WIR2000432,,2179.75,934452.04,Insurance Revenue,DEPOSIT
+2025-05-08,Specialist Consultation,WIR2000433,,2421.26,936873.30,Patient Revenue,DEPOSIT
+2025-05-10,Annual Safety Inspection,ACH2000434,3641.96,,933231.34,Maintenance,WITHDRAWAL
+2025-05-13,Physician Payroll,EFT2000435,14053.62,,919177.72,Salary Expense,WITHDRAWAL
+2025-05-14,Medicaid State Reimbursement,DEP2000436,,14294.74,933472.46,Insurance Revenue,DEPOSIT
+2025-05-16,Medicare Reimbursement - Part B,WIR2000437,,7968.31,941440.77,Insurance Revenue,DEPOSIT
+2025-05-18,Specialist Consultation,INV2000438,,2560.67,944001.44,Patient Revenue,DEPOSIT
+2025-05-19,Pharmacy Copay,DEP2000439,,374.13,944375.57,Patient Revenue,DEPOSIT
+2025-05-22,Hormone Level Testing,EFT2000440,,2245.87,946621.44,Lab Revenue,DEPOSIT
+2025-05-25,Surgical Procedure Payment,CHK2000441,,1700.50,948321.94,Patient Revenue,DEPOSIT
+2025-05-26,Infusion Line Supplies,REF2000442,5896.61,,942425.33,Medical Supplies,WITHDRAWAL
+2025-05-28,Physician Payroll,CHK2000443,17336.53,,925088.80,Salary Expense,WITHDRAWAL
+2025-05-29,Housekeeping Payroll,REF2000444,10349.15,,914739.65,Salary Expense,WITHDRAWAL
+2025-05-30,Clinic Visit Payment,ACH2000445,,249.58,914989.23,Patient Revenue,DEPOSIT
+2025-05-31,Lab Work Payment,EFT2000446,,2091.26,917080.49,Patient Revenue,DEPOSIT
+2025-06-02,Injectable Medication Sales,INV2000447,,2800.16,919880.65,Pharmacy Revenue,DEPOSIT
+2025-06-04,Medicare Reimbursement - Part B,TXN2000448,,12972.89,932853.54,Insurance Revenue,DEPOSIT
+2025-06-08,Rehabilitation Services,TXN2000449,,1603.28,934456.82,Patient Revenue,DEPOSIT
+2025-06-09,Clinic Visit Payment,REF2000450,,2598.90,937055.72,Patient Revenue,DEPOSIT
+2025-06-10,Plumbing Repairs,INV2000451,2643.17,,934412.55,Maintenance,WITHDRAWAL
+2025-06-11,Respiratory Equipment,DEP2000452,7074.79,,927337.76,Medical Supplies,WITHDRAWAL
+2025-06-12,Mental Health Coverage Reimbursement,EFT2000453,,4322.45,931660.21,Insurance Revenue,DEPOSIT
+2025-06-13,Rehabilitation Services,ACH2000454,,2156.36,933816.57,Patient Revenue,DEPOSIT
+2025-06-16,Federal Quarterly Tax Payment,INV2000455,12514.05,,921302.52,Tax Payment,WITHDRAWAL
+2025-06-17,Claim Reimbursement - BCBS,CHK2000456,,17435.38,938737.90,Insurance Revenue,DEPOSIT
+2025-06-18,Claim Reimbursement - Aetna Plus,DEP2000457,,1959.60,940697.50,Insurance Revenue,DEPOSIT
+2025-06-19,Claim Reimbursement - Cigna Select,CHK2000458,,12178.23,952875.73,Insurance Revenue,DEPOSIT
+2025-06-21,Backup Power System,DEP2000459,2195.64,,950680.09,Utilities,WITHDRAWAL
+2025-06-22,Fire System Testing,REF2000460,3369.28,,947310.81,Maintenance,WITHDRAWAL
+2025-06-23,Roof Repair Work,REF2000461,3171.97,,944138.84,Maintenance,WITHDRAWAL
+2025-06-24,OTC Medication Sales,WIR2000462,,6306.22,950445.06,Pharmacy Revenue,DEPOSIT
+2025-06-25,Electronic Health Records License,DEP2000463,819.01,,949626.05,Software Expense,WITHDRAWAL
+2025-06-26,Fire System Testing,ACH2000464,1210.95,,948415.10,Maintenance,WITHDRAWAL
+2025-06-27,Controlled Substance Dispensing,INV2000465,,5106.94,953522.04,Pharmacy Revenue,DEPOSIT
+2025-06-28,Prior Year Tax Settlement,EFT2000466,5295.84,,948226.20,Tax Payment,WITHDRAWAL
+2025-06-29,Hospital Grade Beds,ACH2000467,6388.04,,941838.16,Medical Supplies,WITHDRAWAL
+2025-07-02,Claim Reimbursement - BCBS,WIR2000468,,17417.34,959255.50,Insurance Revenue,DEPOSIT
+2025-07-03,Surgical Procedure Payment,TXN2000469,,1434.25,960689.75,Patient Revenue,DEPOSIT
+2025-07-06,Pharmacy Copay,DEP2000470,,1587.06,962276.81,Patient Revenue,DEPOSIT
+2025-07-07,Radiology Services Payment,INV2000471,,1690.28,963967.09,Patient Revenue,DEPOSIT
+2025-07-08,Claim Reimbursement - Anthem PPO,INV2000472,,14653.60,978620.69,Insurance Revenue,DEPOSIT
+2025-07-09,Lab Work Payment,INV2000473,,2643.79,981264.48,Patient Revenue,DEPOSIT
+2025-07-11,Surgical Procedure Payment,EFT2000474,,412.34,981676.82,Patient Revenue,DEPOSIT
+2025-07-15,Claim Reimbursement - Cigna Select,TXN2000475,,12702.87,994379.69,Insurance Revenue,DEPOSIT
+2025-07-16,HVAC System Maintenance,REF2000476,2553.19,,991826.50,Utilities,WITHDRAWAL
+2025-07-17,Surgical Procedure Payment,TXN2000477,,2911.12,994737.62,Patient Revenue,DEPOSIT
+2025-07-18,Revenue Cycle Payroll,INV2000478,17887.28,,976850.34,Salary Expense,WITHDRAWAL
+2025-07-19,Claim Reimbursement - Aetna Plus,WIR2000479,,16568.96,993419.30,Insurance Revenue,DEPOSIT
+2025-07-20,Infusion Therapy Charges,TXN2000480,,1503.31,994922.61,Pharmacy Revenue,DEPOSIT
+2025-07-22,Clinic Visit Payment,DEP2000481,,2097.20,997019.81,Patient Revenue,DEPOSIT
+2025-07-23,Patient Co-pay - Office Visit,REF2000482,,776.34,997796.15,Patient Revenue,DEPOSIT
+2025-07-24,Custom Compounding Sales,CHK2000483,,5781.99,1003578.14,Pharmacy Revenue,DEPOSIT
+2025-07-26,Lab Technician Payroll,INV2000484,5665.14,,997913.00,Salary Expense,WITHDRAWAL
+2025-07-27,Business License Fee,ACH2000485,9698.73,,988214.27,Tax Payment,WITHDRAWAL
+2025-07-30,Claim Reimbursement - United,EFT2000486,,3063.62,991277.89,Insurance Revenue,DEPOSIT
+2025-08-02,OTC Medication Sales,ACH2000487,,1506.00,992783.89,Pharmacy Revenue,DEPOSIT
+2025-08-03,Claim Reimbursement - Aetna Plus,TXN2000488,,3270.92,996054.81,Insurance Revenue,DEPOSIT
+2025-08-05,Prior Year Tax Settlement,ACH2000489,10712.21,,985342.60,Tax Payment,WITHDRAWAL
+2025-08-06,Injectable Medication Sales,REF2000490,,2879.16,988221.76,Pharmacy Revenue,DEPOSIT
+2025-08-10,Clinic Visit Payment,INV2000491,,413.49,988635.25,Patient Revenue,DEPOSIT
+2025-08-11,Housekeeping Payroll,TXN2000492,10731.88,,977903.37,Salary Expense,WITHDRAWAL
+2025-08-13,Lab Services - Blood Panel,CHK2000493,,1853.74,979757.11,Lab Revenue,DEPOSIT
+2025-08-15,Immunization Fee,ACH2000494,,196.48,979953.59,Patient Revenue,DEPOSIT
+2025-08-17,Surgical Procedure Payment,INV2000495,,1529.03,981482.62,Patient Revenue,DEPOSIT
+2025-08-20,Backup Power System,INV2000496,2741.69,,978740.93,Utilities,WITHDRAWAL
+2025-08-21,Contractor Medical Personnel,DEP2000497,12582.18,,966158.75,Salary Expense,WITHDRAWAL
+2025-08-23,Radiology Services Payment,CHK2000498,,689.45,966848.20,Patient Revenue,DEPOSIT
+2025-08-25,Antibiotic Prep Charges,INV2000499,,5087.36,971935.56,Pharmacy Revenue,DEPOSIT
+2025-08-26,Radiology Services Payment,CHK2000500,,309.57,972245.13,Patient Revenue,DEPOSIT
+2025-08-27,Emergency Department Bill,WIR2000501,,253.46,972498.59,Patient Revenue,DEPOSIT
+2025-08-28,Office Equipment Rental,DEP2000502,8010.95,,964487.64,Rent Expense,WITHDRAWAL
+2025-08-29,Specialist Consultation,DEP2000503,,1490.08,965977.72,Patient Revenue,DEPOSIT
+2025-08-31,HVAC System Maintenance,TXN2000504,573.36,,965404.36,Maintenance,WITHDRAWAL
+2025-09-01,Medicaid State Reimbursement,WIR2000505,,17285.65,982690.01,Insurance Revenue,DEPOSIT
+2025-09-03,Radiology Services Payment,INV2000506,,2219.74,984909.75,Patient Revenue,DEPOSIT
+2025-09-04,Claim Reimbursement - BCBS,CHK2000507,,11246.03,996155.78,Insurance Revenue,DEPOSIT
+2025-09-05,Lab Technician Payroll,DEP2000508,17204.22,,978951.56,Salary Expense,WITHDRAWAL
+2025-09-06,Medicaid State Reimbursement,REF2000509,,15011.92,993963.48,Insurance Revenue,DEPOSIT
+2025-09-07,Lab Work Payment,CHK2000510,,1520.19,995483.67,Patient Revenue,DEPOSIT
+2025-09-08,Medicare Reimbursement - Part B,INV2000511,,16283.98,1011767.65,Insurance Revenue,DEPOSIT
+2025-09-10,Bulk Medication Purchase Resale,REF2000512,,5669.78,1017437.43,Pharmacy Revenue,DEPOSIT
+2025-09-11,Broadband Internet Service,ACH2000513,1642.76,,1015794.67,Utilities,WITHDRAWAL
+2025-09-12,Medicaid State Reimbursement,WIR2000514,,16003.53,1031798.20,Insurance Revenue,DEPOSIT
+2025-09-13,Patient Co-pay - Office Visit,REF2000515,,136.14,1031934.34,Patient Revenue,DEPOSIT
+2025-09-14,Wound Care Dressing Supply,EFT2000516,6822.68,,1025111.66,Medical Supplies,WITHDRAWAL
+2025-09-17,Specialist Consultation,TXN2000517,,435.71,1025547.37,Patient Revenue,DEPOSIT
+2025-09-18,Rehabilitation Services,REF2000518,,2737.88,1028285.25,Patient Revenue,DEPOSIT
+2025-09-19,Claim Reimbursement - Cigna Select,CHK2000519,,9799.11,1038084.36,Insurance Revenue,DEPOSIT
+2025-09-20,Revenue Cycle Payroll,WIR2000520,10138.93,,1027945.43,Salary Expense,WITHDRAWAL
+2025-09-21,Drug Screening Services,INV2000521,,927.43,1028872.86,Lab Revenue,DEPOSIT
+2025-09-23,OTC Medication Sales,INV2000522,,4097.24,1032970.10,Pharmacy Revenue,DEPOSIT
+2025-09-24,Automated External Defibrillator,DEP2000523,12981.74,,1019988.36,Equipment,WITHDRAWAL
+2025-09-25,Claim Reimbursement - Humana Choice,ACH2000524,,3104.12,1023092.48,Insurance Revenue,DEPOSIT
+2025-09-26,Allergy Panel Testing,INV2000525,,3653.69,1026746.17,Lab Revenue,DEPOSIT
+2025-09-27,Allergy Panel Testing,TXN2000526,,3148.71,1029894.88,Lab Revenue,DEPOSIT
+2025-09-28,Pharmacy Copay,DEP2000527,,2873.71,1032768.59,Patient Revenue,DEPOSIT
+2025-09-30,Allergy Panel Testing,EFT2000528,,3728.23,1036496.82,Lab Revenue,DEPOSIT
+2025-10-01,CT Scanner Upgrade,DEP2000529,11872.26,,1024624.56,Equipment,WITHDRAWAL
+2025-10-02,Lab Work Payment,CHK2000530,,720.87,1025345.43,Patient Revenue,DEPOSIT
+2025-10-03,Patient Co-pay - Office Visit,EFT2000531,,209.53,1025554.96,Patient Revenue,DEPOSIT
+2025-10-06,Patient Co-pay - Office Visit,DEP2000532,,2753.37,1028308.33,Patient Revenue,DEPOSIT
+2025-10-07,Rapid Antigen Testing,EFT2000533,,1700.06,1030008.39,Lab Revenue,DEPOSIT
+2025-10-08,Claim Reimbursement - Humana Choice,ACH2000534,,15171.86,1045180.25,Insurance Revenue,DEPOSIT
+2025-10-09,Specialist Consultation,INV2000535,,723.32,1045903.57,Patient Revenue,DEPOSIT
+2025-10-10,Surgical Light Arrays,WIR2000536,6703.32,,1039200.25,Equipment,WITHDRAWAL
+2025-10-11,Physician Payroll,ACH2000537,4452.64,,1034747.61,Salary Expense,WITHDRAWAL
+2025-10-12,Housekeeping Payroll,TXN2000538,13151.98,,1021595.63,Salary Expense,WITHDRAWAL
+2025-10-13,Surgical Procedure Payment,EFT2000539,,2827.40,1024423.03,Patient Revenue,DEPOSIT
+2025-10-14,OTC Medication Sales,DEP2000540,,5189.75,1029612.78,Pharmacy Revenue,DEPOSIT
+2025-10-15,Controlled Substance Dispensing,TXN2000541,,3405.70,1033018.48,Pharmacy Revenue,DEPOSIT
+2025-10-16,Rehabilitation Services,WIR2000542,,2149.38,1035167.86,Patient Revenue,DEPOSIT
+2025-10-17,Lab Work Payment,REF2000543,,2069.80,1037237.66,Patient Revenue,DEPOSIT
+2025-10-18,Claim Reimbursement - United,TXN2000544,,8625.78,1045863.44,Insurance Revenue,DEPOSIT
+2025-10-19,Returned Item Fee,INV2000545,81.25,,1045782.19,Bank Fees,WITHDRAWAL
+2025-10-20,Deposit Box Rental,ACH2000546,158.29,,1045623.90,Bank Fees,WITHDRAWAL
+2025-10-22,Infusion Line Supplies,WIR2000547,442.37,,1045181.53,Medical Supplies,WITHDRAWAL
+2025-10-23,Claim Reimbursement - Anthem PPO,TXN2000548,,12066.58,1057248.11,Insurance Revenue,DEPOSIT
+2025-10-27,Lab Work Payment,INV2000549,,2639.40,1059887.51,Patient Revenue,DEPOSIT
+2025-10-28,Wound Care Dressing Supply,CHK2000550,553.88,,1059333.63,Medical Supplies,WITHDRAWAL
+2025-10-29,Claim Reimbursement - United,CHK2000551,,6657.58,1065991.21,Insurance Revenue,DEPOSIT
+2025-10-30,Immunization Fee,WIR2000552,,315.49,1066306.70,Patient Revenue,DEPOSIT
+2025-11-03,Claim Reimbursement - United,CHK2000553,,8999.67,1075306.37,Insurance Revenue,DEPOSIT
+2025-11-04,Injectable Medication Sales,INV2000554,,1192.80,1076499.17,Pharmacy Revenue,DEPOSIT
+2025-11-05,Specialist Consultation,DEP2000555,,320.87,1076820.04,Patient Revenue,DEPOSIT
+2025-11-06,Lab Work Payment,CHK2000556,,2096.70,1078916.74,Patient Revenue,DEPOSIT
+2025-11-07,Pharmacy Copay,REF2000557,,2888.55,1081805.29,Patient Revenue,DEPOSIT
+2025-11-09,Radiology Services Payment,ACH2000558,,1906.93,1083712.22,Patient Revenue,DEPOSIT
+2025-11-11,Surgical Instrument Sterilization,ACH2000559,2342.27,,1081369.95,Medical Supplies,WITHDRAWAL
+2025-11-12,Revenue Cycle Payroll,ACH2000560,11626.42,,1069743.53,Salary Expense,WITHDRAWAL
+2025-11-13,Radiology Services Payment,EFT2000561,,2775.14,1072518.67,Patient Revenue,DEPOSIT
+2025-11-15,Mental Health Coverage Reimbursement,DEP2000562,,4785.15,1077303.82,Insurance Revenue,DEPOSIT
+2025-11-16,Clinic Visit Payment,TXN2000563,,1623.38,1078927.20,Patient Revenue,DEPOSIT
+2025-11-17,Sterile Needle and Syringe Stock,ACH2000564,5640.52,,1073286.68,Medical Supplies,WITHDRAWAL
+2025-11-18,Claim Reimbursement - BCBS,ACH2000565,,2064.81,1075351.49,Insurance Revenue,DEPOSIT
+2025-11-19,OTC Medication Sales,DEP2000566,,5525.54,1080877.03,Pharmacy Revenue,DEPOSIT
+2025-11-20,Specialist Consultation,REF2000567,,107.07,1080984.10,Patient Revenue,DEPOSIT
+2025-11-21,Clinic Visit Payment,ACH2000568,,380.86,1081364.96,Patient Revenue,DEPOSIT
+2025-11-22,Clinic Visit Payment,WIR2000569,,81.77,1081446.73,Patient Revenue,DEPOSIT
+2025-11-24,Vaccine Administration Fees,REF2000570,,5156.61,1086603.34,Pharmacy Revenue,DEPOSIT
+2025-11-25,Injectable Medication Sales,DEP2000571,,4645.72,1091249.06,Pharmacy Revenue,DEPOSIT
+2025-11-26,Claim Reimbursement - Aetna Plus,EFT2000572,,10555.16,1101804.22,Insurance Revenue,DEPOSIT
+2025-11-27,Janitorial Services,ACH2000573,1568.63,,1100235.59,Maintenance,WITHDRAWAL
+2025-11-28,FICA Payroll Tax,EFT2000574,7108.91,,1093126.68,Tax Payment,WITHDRAWAL
+2025-11-29,Patient Co-pay - Office Visit,DEP2000575,,238.65,1093365.33,Patient Revenue,DEPOSIT
+2025-11-30,Janitorial Services,REF2000576,2443.44,,1090921.89,Maintenance,WITHDRAWAL
+2025-12-03,Registered Nurse Payroll,DEP2000577,9586.79,,1081335.10,Salary Expense,WITHDRAWAL
+2025-12-04,Lab Work Payment,REF2000578,,2658.07,1083993.17,Patient Revenue,DEPOSIT
+2025-12-05,Histopathology Analysis,CHK2000579,,2875.54,1086868.71,Lab Revenue,DEPOSIT
+2025-12-06,3D Ultrasound Machine,DEP2000580,32534.15,,1054334.56,Equipment,WITHDRAWAL
+2025-12-08,Surgical Procedure Payment,DEP2000581,,738.24,1055072.80,Patient Revenue,DEPOSIT
+2025-12-10,Hospital Grade Beds,WIR2000582,3375.09,,1051697.71,Medical Supplies,WITHDRAWAL
+2025-12-11,HVAC System Maintenance,CHK2000583,2691.97,,1049005.74,Utilities,WITHDRAWAL
+2025-12-12,Allergy Panel Testing,DEP2000584,,2832.96,1051838.70,Lab Revenue,DEPOSIT
+2025-12-14,Vaccine Administration Fees,WIR2000585,,3088.67,1054927.37,Pharmacy Revenue,DEPOSIT
+2025-12-15,Radiology Services Payment,REF2000586,,1180.69,1056108.06,Patient Revenue,DEPOSIT
+2025-12-16,Claim Reimbursement - Anthem PPO,ACH2000587,,16066.35,1072174.41,Insurance Revenue,DEPOSIT
+2025-12-17,Telephone System Bill,REF2000588,2399.47,,1069774.94,Utilities,WITHDRAWAL
+2025-12-18,Surgical Procedure Payment,CHK2000589,,374.03,1070148.97,Patient Revenue,DEPOSIT
+2025-12-19,Wound Care Dressing Supply,EFT2000590,8344.16,,1061804.81,Medical Supplies,WITHDRAWAL
+2025-12-21,Claim Reimbursement - Cigna Select,ACH2000591,,5520.04,1067324.85,Insurance Revenue,DEPOSIT
+2025-12-22,State Income Tax Withholding,CHK2000592,8426.03,,1058898.82,Tax Payment,WITHDRAWAL
+2025-12-23,Specialty Pharma Distribution,WIR2000593,,834.32,1059733.14,Pharmacy Revenue,DEPOSIT
+2025-12-25,Surgical Procedure Payment,CHK2000594,,553.72,1060286.86,Patient Revenue,DEPOSIT
+2025-12-26,Surgical Instrument Sterilization,DEP2000595,4050.08,,1056236.78,Medical Supplies,WITHDRAWAL
+2025-12-28,Resident Doctor Stipend,TXN2000596,13346.94,,1042889.84,Salary Expense,WITHDRAWAL
+2025-12-29,Specialist Consultation,ACH2000597,,1740.50,1044630.34,Patient Revenue,DEPOSIT
+2025-12-30,Lab Services - Blood Panel,WIR2000598,,1531.86,1046162.20,Lab Revenue,DEPOSIT
+2025-12-31,Office Suite License,WIR2000599,1007.11,,1045155.09,Software Expense,WITHDRAWAL

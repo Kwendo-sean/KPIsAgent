@@ -1,0 +1,327 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Statements | KPIConsole{% endblock %}
+{% block eyebrow %}Statements{% endblock %}
+{% block page_title %}Statement <em id="greetingPart">library</em>{% endblock %}
+{% block subtitle %}All imported bank statements. Review, inspect, and navigate to transaction-level detail pages.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .amount-positive { color: var(--success); }
+    .amount-negative { color: var(--danger); }
+    .tx-deposit    { background: rgba(22,163,74,.10); color: var(--success); border-color: rgba(22,163,74,.20); }
+    .tx-withdrawal { background: rgba(217,119,6,.10); color: var(--warning); border-color: rgba(217,119,6,.20); }
+    .tx-transfer   { background: rgba(0,0,0,.05);     color: var(--muted);   border-color: var(--border); }
+    .tx-card {
+        padding: 12px 14px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        transition: box-shadow 140ms ease;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .tx-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .tx-card-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        min-width: 0;
+    }
+    .tx-card-desc {
+        min-width: 0;
+        flex: 1;
+    }
+    .tx-card-desc-text {
+        font-weight: 600;
+        font-size: .86rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: block;
+    }
+    .tx-card-meta {
+        font-size: .76rem;
+        color: var(--muted);
+        margin-top: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .tx-card-amount {
+        text-align: right;
+        flex-shrink: 0;
+    }
+    .tx-card-value {
+        font-size: .88rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    /* Pagination */
+    .pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 0 0;
+        border-top: 1px solid var(--border-soft);
+        margin-top: 8px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .pagination-info { font-size: .82rem; color: var(--muted); }
+    .pagination-links { display: flex; gap: 6px; align-items: center; }
+    .page-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 34px; height: 34px; padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        font-size: .82rem; font-weight: 600;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: all 140ms ease;
+    }
+    .page-btn:hover { background: var(--surface-alt); border-color: #C5C5C5; color: var(--primary); }
+    .page-btn.current { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .page-btn.disabled { opacity: .4; pointer-events: none; }
+</style>
+{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <button class="primary-btn" type="button" id="openUploadModal">
+        <i class="fas fa-plus"></i> Import Statement
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="two-col" style="margin-top: 0;">
+    <!-- ── Statement table ── -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Imported Statements</h2>
+            <span class="panel-note">{{ total_statements }} total · {{ processed_statements }} processed</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Uploaded</th>
+                        <th>Period</th>
+                        <th style="text-align:right;">Deposits</th>
+                        <th style="text-align:right;">Balance</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'statement_detail' row.id %}" class="link-btn">{{ row.file_name }}</a>
+                        </td>
+                        <td class="muted">{{ row.uploaded }}</td>
+                        <td class="muted">{% if row.period %}{{ row.period }}{% else %}—{% endif %}</td>
+                        <td class="mono" style="text-align:right;">
+                            {{ currency_symbol }} {{ row.deposits|floatformat:2 }}
+                        </td>
+                        <td class="mono" style="text-align:right;">
+                            {{ currency_symbol }} {{ row.closing_balance|floatformat:2 }}
+                        </td>
+                        <td>
+                            <span class="tag {% if row.status == 'Processed' %}success{% else %}danger{% endif %}">
+                                {{ row.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;">
+                            <button
+                                class="ghost-btn reprocess-statement-btn"
+                                type="button"
+                                data-statement-id="{{ row.id }}"
+                                title="Reprocess with AI"
+                                style="padding: 6px 12px; font-size:.82rem;"
+                            >
+                                <i class="fas fa-rotate"></i>
+                            </button>
+                            <button
+                                class="ghost-btn delete-statement-btn"
+                                type="button"
+                                data-statement-id="{{ row.id }}"
+                                style="padding: 6px 12px; font-size:.82rem;"
+                            >
+                                <i class="fas fa-trash-can"></i>
+                            </button>
+                        </div>
+                        </td>
+                    </tr>
+                    {% if row.error %}
+                    <tr>
+                        <td colspan="7" style="padding: 6px 12px; font-size:.84rem; color:var(--warning);">
+                            <i class="fas fa-circle-exclamation"></i> {{ row.error }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="muted" style="text-align:center; padding:40px;">
+                            No statements imported yet. Click <strong>Import Statement</strong> to get started.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination-bar">
+            <span class="pagination-info">
+                Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} statements
+            </span>
+            <div class="pagination-links">
+                {% if page_obj.has_previous %}
+                    <a class="page-btn" href="?page={{ page_obj.previous_page_number }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                {% else %}
+                    <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <span class="page-btn current">{{ num }}</span>
+                    {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                        <a class="page-btn" href="?page={{ num }}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a class="page-btn" href="?page={{ page_obj.next_page_number }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                {% else %}
+                    <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── Latest transactions sidebar ── -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title">Latest Transactions</h2>
+            <span class="panel-note">
+                {% if latest_statement %}{{ latest_statement.file_name }}{% else %}Waiting for upload{% endif %}
+            </span>
+        </div>
+        <div class="activity-stack">
+            {% for tx in tx_page_obj %}
+            <div class="tx-card">
+                <div class="tx-card-inner">
+                    <div class="tx-card-desc">
+                        <span class="tx-card-desc-text" title="{{ tx.description }}">{{ tx.description|truncatechars:50 }}</span>
+                        <div class="tx-card-meta">
+                            {{ tx.transaction_date }}{% if tx.category %} &middot; {{ tx.category }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="tx-card-amount">
+                        <div class="tx-card-value mono {% if tx.transaction_type == 'DEPOSIT' %}amount-positive{% elif tx.transaction_type == 'WITHDRAWAL' %}amount-negative{% endif %}">
+                            {% if tx.transaction_type == 'WITHDRAWAL' %}−{% endif %}{{ currency_symbol }} {{ tx.amount|floatformat:2 }}
+                        </div>
+                        <span class="tag {% if tx.transaction_type == 'DEPOSIT' %}tx-deposit{% elif tx.transaction_type == 'WITHDRAWAL' %}tx-withdrawal{% else %}tx-transfer{% endif %}" style="margin-top:4px;display:inline-flex;font-size:.66rem;">
+                            {{ tx.transaction_type }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert-card">
+                <p class="muted">Transactions from the latest imported statement will appear here once processed.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if tx_page_obj.paginator.num_pages > 1 %}
+        <div class="pagination-bar" style="margin-top:14px;">
+            <span class="pagination-info">{{ tx_page_obj.start_index }}–{{ tx_page_obj.end_index }} of {{ tx_page_obj.paginator.count }}</span>
+            <div class="pagination-links">
+                {% if tx_page_obj.has_previous %}
+                    <a class="page-btn" href="?tx_page={{ tx_page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a>
+                {% else %}
+                    <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+                {% endif %}
+                <span class="page-btn current">{{ tx_page_obj.number }} / {{ tx_page_obj.paginator.num_pages }}</span>
+                {% if tx_page_obj.has_next %}
+                    <a class="page-btn" href="?tx_page={{ tx_page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a>
+                {% else %}
+                    <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function deleteStatement(statementId) {
+        if (!confirm('Delete this statement and all its extracted KPI data? This cannot be undone.')) return;
+
+        try {
+            const response = await fetch(`/statement/${statementId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('#csrfContainer input[name="csrfmiddlewaretoken"]').value,
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) throw new Error(payload.error || 'Delete failed.');
+            window.location.reload();
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    document.querySelectorAll('.delete-statement-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteStatement(btn.dataset.statementId));
+    });
+
+    async function reprocessStatement(statementId) {
+        const btn = document.querySelector(`.reprocess-statement-btn[data-statement-id="${statementId}"]`);
+        const icon = btn.querySelector('i');
+        btn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin';
+
+        try {
+            const response = await fetch(`/statement/${statementId}/reprocess/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('#csrfContainer input[name="csrfmiddlewaretoken"]').value,
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) throw new Error(payload.error || 'Reprocess failed.');
+            window.location.reload();
+        } catch (err) {
+            alert(err.message);
+            btn.disabled = false;
+            icon.className = 'fas fa-rotate';
+        }
+    }
+
+    document.querySelectorAll('.reprocess-statement-btn').forEach(btn => {
+        btn.addEventListener('click', () => reprocessStatement(btn.dataset.statementId));
+    });
+</script>
+{% endblock %}

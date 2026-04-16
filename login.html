@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | KPIConsole</title>
+    <meta name="description" content="Secure sign-in for the KPIConsole financial dashboard.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary:    #0D0D0D;
+            --accent:     #DC2626;
+            --bg:         #F2F2F2;
+            --surface:    #FFFFFF;
+            --border:     #E3E3E3;
+            --muted:      #6B6B6B;
+            --text:       #111111;
+            --error-bg:   rgba(220,38,38,.08);
+            --error-fg:   #DC2626;
+        }
+
+        html, body {
+            min-height: 100%;
+            font-family: "Inter", system-ui, sans-serif;
+            font-feature-settings: "cv02","cv03","cv04","cv11";
+            -webkit-font-smoothing: antialiased;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Split layout */
+        .login-page {
+            display: grid;
+            grid-template-columns: 1fr 480px;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* Left panel — brand/visual side */
+        .brand-panel {
+            background: var(--primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        .brand-panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+            background-size: 52px 52px;
+            pointer-events: none;
+        }
+        /* Accent blobs */
+        .brand-panel::after {
+            content: "";
+            position: absolute;
+            top: -120px; right: -80px;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(220,38,38,.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .brand-blob-bottom {
+            position: absolute;
+            bottom: -100px; left: -60px;
+            width: 340px; height: 340px;
+            background: radial-gradient(circle, rgba(220,38,38,.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+            z-index: 1;
+        }
+        .brand-logo-icon {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            background: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff;
+            font-size: 1.25rem;
+            box-shadow: 0 8px 24px rgba(220,38,38,.40);
+        }
+        .brand-logo-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.03em;
+        }
+        .brand-logo-name span { color: var(--accent); }
+
+        .brand-hero {
+            position: relative;
+            z-index: 1;
+        }
+        .brand-hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(255,255,255,.07);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 99px;
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: rgba(255,255,255,.65);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+        .brand-hero h2 {
+            font-size: clamp(2rem, 3vw, 2.8rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1.10;
+            color: #fff;
+            margin-bottom: 18px;
+        }
+        .brand-hero h2 em {
+            font-style: normal;
+            color: var(--accent);
+        }
+        .brand-hero p {
+            color: rgba(255,255,255,.50);
+            font-size: 0.95rem;
+            line-height: 1.65;
+            max-width: 380px;
+        }
+
+        .brand-stats {
+            display: flex;
+            gap: 28px;
+            position: relative;
+            z-index: 1;
+        }
+        .brand-stat-item {
+            border-left: 2px solid rgba(255,255,255,.10);
+            padding-left: 16px;
+        }
+        .brand-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            color: #fff;
+            line-height: 1;
+        }
+        .brand-stat-label {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,.40);
+            margin-top: 4px;
+        }
+
+        /* Right panel — form */
+        .form-panel {
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 56px 48px;
+            position: relative;
+        }
+
+        .form-eyebrow {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+        .form-title {
+            font-size: 1.9rem;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+        .form-subtitle {
+            font-size: 0.90rem;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 36px;
+        }
+
+        .error-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--error-bg);
+            border: 1px solid rgba(220,38,38,.20);
+            border-radius: 10px;
+            color: var(--error-fg);
+            font-size: 0.88rem;
+            margin-bottom: 24px;
+        }
+
+        .field { margin-bottom: 20px; }
+        .field-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .input-wrap { position: relative; }
+        .input-wrap i {
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 0.88rem;
+            pointer-events: none;
+        }
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font: inherit;
+            font-size: 0.95rem;
+            color: var(--text);
+            background: #FAFAFA;
+            transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+            outline: none;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(220,38,38,.10);
+        }
+
+        .btn-signin {
+            width: 100%;
+            margin-top: 8px;
+            padding: 13px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: -0.01em;
+            transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+            box-shadow: 0 4px 14px rgba(0,0,0,.20);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-signin:hover {
+            background: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(220,38,38,.30);
+        }
+        .btn-signin:active { transform: translateY(0); }
+
+        .demo-box {
+            margin-top: 28px;
+            padding: 16px 18px;
+            background: #F8F8F8;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .demo-box-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        .demo-box p {
+            font-size: 0.88rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        code {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 2px 7px;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 0.84rem;
+            color: var(--primary);
+        }
+
+        @media (max-width: 860px) {
+            .login-page { grid-template-columns: 1fr; }
+            .brand-panel { display: none; }
+            .form-panel { padding: 48px 32px; }
+        }
+        @media (max-width: 480px) {
+            .form-panel { padding: 36px 24px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .btn-signin, input { transition: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <!-- Brand / Visual Side -->
+        <div class="brand-panel">
+            <div class="brand-blob-bottom"></div>
+            <div class="brand-logo">
+                <div class="brand-logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="brand-logo-name">KPI<span>Console</span></div>
+            </div>
+
+            <div class="brand-hero">
+                <div class="brand-hero-tag">
+                    <i class="fas fa-circle" style="font-size:.5rem; color:var(--accent);"></i>
+                    Hospital Financial Intelligence
+                </div>
+                <h2>Your finances,<br><em>clearly</em> understood.</h2>
+                <p>Import bank statements, let AI do the heavy lifting, and get actionable KPIs in seconds.</p>
+            </div>
+
+            <div class="brand-stats">
+                <div class="brand-stat-item">
+                    <div class="brand-stat-value">PDF & CSV</div>
+                    <div class="brand-stat-label">Import formats</div>
+                </div>
+                <div class="brand-stat-item">
+                    <div class="brand-stat-value">AI-powered</div>
+                    <div class="brand-stat-label">Analysis engine</div>
+                </div>
+                <div class="brand-stat-item">
+                    <div class="brand-stat-value">Real-time</div>
+                    <div class="brand-stat-label">KPI tracking</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Side -->
+        <div class="form-panel">
+            <div class="form-eyebrow">Welcome back</div>
+            <h1 class="form-title">Sign in</h1>
+            <p class="form-subtitle">Enter your credentials to access your dashboard.</p>
+
+            {% if error %}
+            <div class="error-banner">
+                <i class="fas fa-circle-exclamation"></i>
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{% url 'login' %}" autocomplete="on">
+                {% csrf_token %}
+
+                <div class="field">
+                    <label class="field-label" for="username">Username</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-user"></i>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            required
+                            placeholder="Enter your username"
+                            autocomplete="username"
+                        >
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="password">Password</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-signin">
+                    <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+                </button>
+            </form>
+
+            <div class="demo-box">
+                <div class="demo-box-label">Demo credentials</div>
+                <p>Username: <code>admin</code> &nbsp;&middot;&nbsp; Password: <code>admin123</code></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

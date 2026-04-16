@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{% block title %}KPIConsole{% endblock %}</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<style>
+		/* ─── Design Tokens ─────────────────────────────────────── */
+		:root {
+			/* Brand */
+			--primary:        #0D0D0D;
+			--primary-light:  #2A2A2A;
+			--accent:         #DC2626;
+			--accent-dark:    #B91C1C;
+			--accent-soft:    rgba(220,38,38,.08);
+
+			/* Surfaces */
+			--bg:             #F2F2F2;
+			--surface:        #FFFFFF;
+			--surface-alt:    #F8F8F8;
+			--surface-glass:  rgba(255,255,255,.80);
+			--gradient-glass: linear-gradient(135deg,rgba(255,255,255,.9) 0%,rgba(248,248,248,.8) 100%);
+
+			/* Text */
+			--text:           #111111;
+			--text-secondary: #3D3D3D;
+			--muted:          #6B6B6B;
+
+			/* Semantic */
+			--success:        #16A34A;
+			--success-light:  #22C55E;
+			--warning:        #D97706;
+			--warning-light:  #F59E0B;
+			--danger:         #DC2626;
+			--danger-light:   #EF4444;
+			--good:           #16A34A;
+			--bad:            #DC2626;
+			--neutral:        #EA580C;
+
+			/* Borders */
+			--border:         #E3E3E3;
+			--border-soft:    #EFEFEF;
+
+			/* Shadows */
+			--shadow:         0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+			--shadow-md:      0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+			--shadow-lg:      0 12px 32px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.05);
+			--shadow-hover:   0 8px 24px rgba(0,0,0,.10);
+
+			/* Gradients */
+			--gradient-primary: linear-gradient(135deg,#0D0D0D 0%,#2A2A2A 100%);
+			--gradient-accent:  linear-gradient(135deg,#DC2626 0%,#EF4444 100%);
+			--gradient-good:    linear-gradient(135deg,#16A34A 0%,#22C55E 100%);
+			--gradient-bad:     linear-gradient(135deg,#DC2626 0%,#EF4444 100%);
+
+			/* Misc */
+			--radius:         14px;
+			--radius-lg:      20px;
+			--sidebar-width:  280px;
+		}
+
+		/* ─── Reset ──────────────────────────────────────────────── */
+		*, *::before, *::after { box-sizing: border-box; }
+		html, body { margin: 0; min-height: 100%; }
+		body {
+			font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+			font-feature-settings: "cv02","cv03","cv04","cv11";
+			background: var(--bg);
+			color: var(--text);
+			-webkit-font-smoothing: antialiased;
+		}
+		a { color: inherit; text-decoration: none; }
+		button, input, textarea, select { font: inherit; }
+		p { margin: 0; }
+
+		/* ─── Layout Shell ───────────────────────────────────────── */
+		.app-shell {
+			min-height: 100vh;
+			display: grid;
+			grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+		}
+
+		/* ─── Sidebar ────────────────────────────────────────────── */
+		.sidebar {
+			background: var(--surface);
+			border-right: 1px solid var(--border);
+			padding: 28px 20px;
+			position: sticky;
+			top: 0;
+			height: 100vh;
+			overflow-y: auto;
+			display: flex;
+			flex-direction: column;
+			z-index: 10;
+		}
+		.sidebar::-webkit-scrollbar { width: 4px; }
+		.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 0 8px;
+			margin-bottom: 32px;
+		}
+		.brand-icon {
+			width: 40px; height: 40px;
+			border-radius: 12px;
+			background: var(--gradient-accent);
+			display: flex; align-items: center; justify-content: center;
+			color: #fff;
+			font-size: 1.1rem;
+			flex-shrink: 0;
+			box-shadow: 0 4px 12px rgba(220,38,38,.30);
+		}
+		.brand-name {
+			font-size: 1.15rem;
+			font-weight: 700;
+			letter-spacing: -0.03em;
+			color: var(--primary);
+			line-height: 1;
+		}
+		.brand-name span { color: var(--accent); }
+		.brand-tagline {
+			font-size: 0.72rem;
+			color: var(--muted);
+			margin-top: 3px;
+			letter-spacing: 0.02em;
+		}
+
+		.sidebar-section-label {
+			margin: 28px 0 8px 8px;
+			color: var(--muted);
+			font-size: 0.70rem;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+		}
+
+		.nav-link {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px;
+			padding: 10px 12px;
+			border-radius: var(--radius);
+			color: var(--muted);
+			font-size: 0.90rem;
+			font-weight: 500;
+			transition: all 180ms cubic-bezier(0.4,0,0.2,1);
+			margin-bottom: 2px;
+			position: relative;
+		}
+		.nav-link-inner {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		.nav-link i {
+			width: 17px;
+			font-size: 0.88rem;
+			color: var(--muted);
+			transition: color 150ms ease;
+			flex-shrink: 0;
+		}
+		.nav-link:hover {
+			background: var(--surface-alt);
+			color: var(--text);
+		}
+		.nav-link:hover i { color: var(--accent); }
+		.nav-link.is-active {
+			background: var(--accent-soft);
+			color: var(--accent);
+			font-weight: 600;
+		}
+		.nav-link.is-active i { color: var(--accent); }
+		.nav-link.is-active::before {
+			content: "";
+			position: absolute;
+			left: 0; top: 20%; bottom: 20%;
+			width: 3px;
+			background: var(--accent);
+			border-radius: 0 3px 3px 0;
+		}
+		.nav-badge {
+			min-width: 22px; height: 22px;
+			padding: 0 6px;
+			border-radius: 99px;
+			background: var(--border);
+			color: var(--text-secondary);
+			display: inline-flex; align-items: center; justify-content: center;
+			font-size: 0.72rem;
+			font-weight: 700;
+		}
+		.nav-link.is-active .nav-badge {
+			background: rgba(220,38,38,.15);
+			color: var(--accent);
+		}
+
+		.sidebar-spacer { flex: 1; }
+
+		.sidebar-foot {
+			margin-top: 16px;
+			padding: 16px;
+			background: var(--surface-alt);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+		}
+		.sidebar-foot-label {
+			font-size: 0.72rem;
+			font-weight: 700;
+			letter-spacing: 0.10em;
+			text-transform: uppercase;
+			color: var(--muted);
+			margin-bottom: 8px;
+		}
+		.sidebar-foot-stat {
+			font-size: 1.4rem;
+			font-weight: 700;
+			letter-spacing: -0.03em;
+			color: var(--primary);
+			line-height: 1;
+		}
+		.sidebar-foot-stat span { color: var(--muted); font-size: 1rem; font-weight: 400; }
+		.sidebar-foot p {
+			margin-top: 8px;
+			font-size: 0.78rem;
+			color: var(--muted);
+			line-height: 1.5;
+		}
+
+		/* ─── Main Shell ─────────────────────────────────────────── */
+		.main-shell {
+			min-width: 0;
+			padding: 32px 40px 48px;
+		}
+
+		/* ─── Topbar ─────────────────────────────────────────────── */
+		.topbar {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 24px;
+			padding-bottom: 28px;
+			border-bottom: 1px solid var(--border);
+			margin-bottom: 32px;
+		}
+		.eyebrow {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			margin-bottom: 10px;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 0.14em;
+			font-size: 0.72rem;
+			font-weight: 700;
+		}
+		.page-title {
+			margin: 0;
+			font-size: clamp(1.9rem, 2.8vw, 3rem);
+			font-weight: 700;
+			letter-spacing: -0.04em;
+			line-height: 1.05;
+			color: var(--primary);
+			animation: fadeSlideUp 0.5s ease-out both;
+		}
+		.page-title em {
+			font-style: normal;
+			color: var(--accent);
+		}
+		@keyframes fadeSlideUp {
+			from { opacity: 0; transform: translateY(8px); }
+			to   { opacity: 1; transform: translateY(0); }
+		}
+		.subtitle {
+			margin-top: 8px;
+			color: var(--muted);
+			font-size: 0.93rem;
+			line-height: 1.55;
+			max-width: 680px;
+		}
+		.topbar-right {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			flex-wrap: wrap;
+			flex-shrink: 0;
+			padding-top: 6px;
+		}
+
+		/* ─── Buttons & Pills ────────────────────────────────────── */
+		.pill {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 99px;
+			padding: 8px 16px;
+			font-size: 0.84rem;
+			font-weight: 500;
+			color: var(--text-secondary);
+		}
+		.status-dot {
+			width: 8px; height: 8px;
+			border-radius: 50%;
+			background: var(--success);
+			box-shadow: 0 0 0 2px rgba(22,163,74,.20);
+		}
+		.ghost-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 99px;
+			padding: 8px 18px;
+			font-size: 0.85rem;
+			font-weight: 500;
+			color: var(--text-secondary);
+			cursor: pointer;
+			transition: all 160ms ease;
+		}
+		.ghost-btn:hover {
+			background: var(--surface-alt);
+			border-color: #C5C5C5;
+			color: var(--primary);
+			transform: translateY(-1px);
+		}
+		.danger-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 99px;
+			padding: 8px 18px;
+			font-size: 0.85rem;
+			font-weight: 500;
+			color: var(--muted);
+			cursor: pointer;
+			transition: all 160ms ease;
+		}
+		.danger-btn:hover {
+			background: rgba(220,38,38,.06);
+			border-color: rgba(220,38,38,.3);
+			color: var(--accent);
+		}
+		.primary-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			border: 0;
+			border-radius: 99px;
+			background: var(--gradient-primary);
+			color: white;
+			padding: 10px 22px;
+			font-size: 0.88rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 200ms cubic-bezier(0.4,0,0.2,1);
+			box-shadow: var(--shadow);
+		}
+		.primary-btn:hover {
+			background: var(--gradient-accent);
+			transform: translateY(-2px);
+			box-shadow: var(--shadow-lg);
+		}
+		.link-btn {
+			color: var(--accent);
+			font-weight: 600;
+			font-size: 0.87rem;
+			transition: opacity 140ms ease;
+		}
+		.link-btn:hover { opacity: 0.75; }
+
+		/* ─── Content Area ───────────────────────────────────────── */
+		.content-area { /* wrapper */ }
+
+		.page-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 10px;
+			margin-bottom: 20px;
+		}
+
+		/* ─── Card Grid ──────────────────────────────────────────── */
+		.card-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+			gap: 20px;
+		}
+
+		/* ─── Stat Cards ─────────────────────────────────────────── */
+		.stat-card {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: var(--radius-lg);
+			padding: 28px 24px 24px;
+			min-height: 164px;
+			position: relative;
+			overflow: hidden;
+			transition: all 280ms cubic-bezier(0.4,0,0.2,1);
+		}
+		.stat-card::after {
+			content: "";
+			position: absolute;
+			inset: 0 auto auto 0;
+			width: 100%; height: 3px;
+			background: var(--card-accent, var(--accent));
+			border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+		}
+		.stat-card:hover {
+			box-shadow: var(--shadow-hover);
+			transform: translateY(-3px);
+			border-color: transparent;
+		}
+		/* Semantic tones */
+		.tone-good    { --card-accent: linear-gradient(90deg,#16A34A,#22C55E); }
+		.tone-bad     { --card-accent: linear-gradient(90deg,#DC2626,#EF4444); }
+		.tone-neutral { --card-accent: linear-gradient(90deg,#EA580C,#F97316); }
+		.tone-green   { --card-accent: linear-gradient(90deg,#16A34A,#22C55E); }
+		.tone-blue    { --card-accent: linear-gradient(90deg,#0D0D0D,#444444); }
+		.tone-amber   { --card-accent: linear-gradient(90deg,#EA580C,#F97316); }
+		.tone-rose    { --card-accent: linear-gradient(90deg,#DC2626,#EF4444); }
+		.tone-purple  { --card-accent: linear-gradient(90deg,#5B21B6,#8B5CF6); }
+		.tone-teal    { --card-accent: linear-gradient(90deg,#0D9488,#14B8A6); }
+
+		.stat-label {
+			color: var(--muted);
+			font-size: 0.72rem;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+		}
+		.stat-value {
+			margin-top: 18px;
+			font-size: clamp(26px,2.6vw,36px);
+			font-weight: 700;
+			letter-spacing: -0.03em;
+			line-height: 1;
+			color: var(--primary);
+		}
+		.stat-meta {
+			margin-top: 10px;
+			color: var(--muted);
+			font-size: 0.85rem;
+			line-height: 1.5;
+		}
+		.stat-icon {
+			position: absolute;
+			right: -6px; bottom: -14px;
+			font-size: 5.5rem;
+			opacity: 0.055;
+			pointer-events: none;
+			transition: all 280ms ease;
+			color: var(--muted);
+		}
+		.stat-card:hover .stat-icon { opacity: 0.10; transform: scale(1.08) rotate(4deg); }
+
+		/* ─── Panel ──────────────────────────────────────────────── */
+		.panel {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: var(--radius-lg);
+			padding: 24px 28px;
+			transition: all 280ms cubic-bezier(0.4,0,0.2,1);
+		}
+		.panel:hover {
+			box-shadow: var(--shadow-md);
+		}
+		.panel-head {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 16px;
+			margin-bottom: 20px;
+		}
+		.panel-title {
+			margin: 0;
+			color: var(--muted);
+			font-size: 0.72rem;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.panel-title i { color: var(--accent); font-size: 0.80rem; }
+		.panel-note {
+			color: var(--muted);
+			font-size: 0.84rem;
+		}
+
+		/* ─── Layout: Two Column ─────────────────────────────────── */
+		.two-col {
+			display: grid;
+			grid-template-columns: minmax(0,1.55fr) minmax(340px,1fr);
+			gap: 20px;
+			margin-top: 20px;
+			align-items: start;
+		}
+
+		/* ─── Charts ─────────────────────────────────────────────── */
+		.chart-box { height: 340px; }
+
+		/* ─── Table ──────────────────────────────────────────────── */
+		.table-wrap { overflow: auto; }
+		table { width: 100%; border-collapse: collapse; }
+		th, td {
+			padding: 13px 14px;
+			text-align: left;
+			border-bottom: 1px solid var(--border-soft);
+		}
+		th {
+			background: var(--surface-alt);
+			color: var(--muted);
+			font-size: 0.70rem;
+			font-weight: 700;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			white-space: nowrap;
+		}
+		td {
+			color: var(--text);
+			font-size: 0.90rem;
+			line-height: 1.5;
+		}
+		tr:last-child td { border-bottom: none; }
+		.muted { color: var(--muted); }
+		.mono {
+			font-family: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+			font-variant-numeric: tabular-nums;
+		}
+
+		/* ─── Tags ───────────────────────────────────────────────── */
+		.tag {
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			padding: 4px 12px;
+			border-radius: 99px;
+			font-size: 0.72rem;
+			font-weight: 600;
+			letter-spacing: 0.04em;
+			border: 1px solid transparent;
+		}
+		.tag.success {
+			background: rgba(22,163,74,.10);
+			color: #16A34A;
+			border-color: rgba(22,163,74,.20);
+		}
+		.tag.warning {
+			background: rgba(217,119,6,.10);
+			color: #D97706;
+			border-color: rgba(217,119,6,.20);
+		}
+		.tag.danger {
+			background: rgba(220,38,38,.10);
+			color: #DC2626;
+			border-color: rgba(220,38,38,.20);
+		}
+		.tag.info {
+			background: rgba(0,0,0,.06);
+			color: var(--text-secondary);
+			border-color: var(--border);
+		}
+
+		/* ─── Alert Stack ────────────────────────────────────────── */
+		.alert-stack, .activity-stack { display: grid; gap: 12px; }
+		.alert-card {
+			padding: 14px 16px;
+			background: var(--surface-alt);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+		}
+		.alert-card p {
+			margin-top: 8px;
+			color: var(--muted);
+			font-size: 0.88rem;
+			line-height: 1.55;
+		}
+
+		/* ─── Summary Selector ───────────────────────────────────── */
+		.summary-selector {
+			margin-bottom: 20px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: var(--radius-lg);
+			padding: 20px 24px;
+		}
+		.selector-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 14px;
+		}
+		.selector-options {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
+		.selector-option {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 8px 16px;
+			border-radius: 99px;
+			background: var(--surface-alt);
+			border: 1px solid var(--border);
+			color: var(--text-secondary);
+			font-size: 0.84rem;
+			font-weight: 500;
+			transition: all 160ms ease;
+		}
+		.selector-option:hover {
+			border-color: rgba(220,38,38,.30);
+			color: var(--primary);
+			background: var(--surface);
+		}
+		.selector-option.is-active {
+			background: var(--gradient-primary);
+			color: white;
+			border-color: transparent;
+			box-shadow: var(--shadow);
+		}
+		.selector-option.is-active i { color: white; }
+
+		/* ─── Summaries Grid ─────────────────────────────────────── */
+		.summaries-section { margin-top: 20px; }
+		.summaries-panel { padding: 24px 28px; }
+		.summaries-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+			gap: 18px;
+			margin-top: 18px;
+		}
+		.summary-card {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			padding: 20px 22px;
+			position: relative;
+			overflow: hidden;
+			transition: all 260ms ease;
+		}
+		.summary-card:hover {
+			transform: translateY(-2px);
+			box-shadow: var(--shadow-md);
+		}
+		.summary-card::before {
+			content: "";
+			position: absolute;
+			inset: 0 auto auto 0;
+			width: 100%; height: 3px;
+			background: var(--summary-accent, var(--accent));
+		}
+		.summary-card.tone-good    { --summary-accent: var(--good); }
+		.summary-card.tone-bad     { --summary-accent: var(--bad); }
+		.summary-card.tone-neutral { --summary-accent: var(--neutral); }
+		.summary-card.tone-green   { --summary-accent: var(--good); }
+		.summary-card.tone-blue    { --summary-accent: var(--primary); }
+		.summary-card.tone-amber   { --summary-accent: var(--neutral); }
+		.summary-card.tone-rose    { --summary-accent: var(--bad); }
+		.summary-card.tone-purple  { --summary-accent: #7C3AED; }
+
+		.summary-header {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 12px;
+		}
+		.summary-header i {
+			width: 34px; height: 34px;
+			display: flex; align-items: center; justify-content: center;
+			background: var(--surface-alt);
+			border-radius: 10px;
+			color: var(--accent);
+			font-size: 0.95rem;
+			flex-shrink: 0;
+		}
+		.summary-header h3 {
+			margin: 0;
+			font-size: 0.90rem;
+			font-weight: 600;
+			color: var(--primary);
+		}
+		.summary-content p {
+			margin: 0 0 8px;
+			color: var(--text-secondary);
+			line-height: 1.65;
+			font-size: 0.90rem;
+		}
+		.summary-detail {
+			display: block;
+			margin-top: 10px;
+			padding-top: 10px;
+			border-top: 1px solid var(--border-soft);
+			color: var(--muted);
+			font-size: 0.82rem;
+			line-height: 1.5;
+		}
+		.summary-list {
+			list-style: none; margin: 0; padding: 0;
+		}
+		.summary-list li {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 9px 0;
+			border-bottom: 1px solid var(--border-soft);
+			font-size: 0.88rem;
+		}
+		.summary-list li:last-child { border-bottom: none; }
+		.summary-list .source-name { font-weight: 500; color: var(--text); }
+		.summary-list .source-amount {
+			font-family: "JetBrains Mono", monospace;
+			font-weight: 600;
+			color: var(--success);
+		}
+		.summary-list.expense .source-amount { color: var(--warning); }
+
+		/* ─── Empty State ────────────────────────────────────────── */
+		.empty-state {
+			padding: 64px 48px;
+			text-align: center;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: var(--radius-lg);
+		}
+		.empty-state-icon {
+			width: 72px; height: 72px;
+			background: var(--surface-alt);
+			border: 1px solid var(--border);
+			border-radius: 20px;
+			display: flex; align-items: center; justify-content: center;
+			margin: 0 auto 24px;
+			font-size: 2rem;
+			color: var(--muted);
+		}
+		.empty-state h3 {
+			margin: 0 0 10px;
+			font-size: 1.4rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			color: var(--primary);
+		}
+		.empty-state p {
+			max-width: 520px;
+			margin: 0 auto;
+			color: var(--muted);
+			line-height: 1.65;
+		}
+
+		/* ─── Modal ──────────────────────────────────────────────── */
+		.modal-backdrop {
+			position: fixed; inset: 0;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			padding: 24px;
+			background: rgba(10,10,10,.35);
+			backdrop-filter: blur(6px);
+			-webkit-backdrop-filter: blur(6px);
+			z-index: 40;
+		}
+		.modal-backdrop.is-open { display: flex; }
+		.upload-modal {
+			width: min(540px, 100%);
+			padding: 28px 32px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: var(--radius-lg);
+			box-shadow: var(--shadow-lg);
+			animation: modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+		}
+		@keyframes modalIn {
+			from { opacity: 0; transform: translateY(16px) scale(.97); }
+			to   { opacity: 1; transform: translateY(0) scale(1); }
+		}
+		.modal-head {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 16px;
+			margin-bottom: 24px;
+		}
+		.modal-head h3 {
+			margin: 0 0 6px;
+			font-size: 1.3rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			color: var(--primary);
+		}
+		.modal-head p {
+			margin: 0;
+			color: var(--muted);
+			font-size: 0.88rem;
+			line-height: 1.5;
+		}
+		.modal-close {
+			width: 36px; height: 36px;
+			border-radius: 10px;
+			border: 1px solid var(--border);
+			background: var(--surface-alt);
+			color: var(--muted);
+			cursor: pointer;
+			display: flex; align-items: center; justify-content: center;
+			flex-shrink: 0;
+			transition: all 140ms ease;
+		}
+		.modal-close:hover { background: var(--surface); color: var(--text); }
+
+		.dropzone {
+			padding: 32px;
+			border-radius: var(--radius);
+			border: 2px dashed var(--border);
+			background: var(--surface-alt);
+			text-align: center;
+			transition: all 160ms ease;
+		}
+		.dropzone.is-dragging {
+			background: rgba(220,38,38,.04);
+			border-color: var(--accent);
+		}
+		.dropzone-icon {
+			width: 52px; height: 52px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			display: flex; align-items: center; justify-content: center;
+			margin: 0 auto 14px;
+			font-size: 1.4rem;
+			color: var(--accent);
+		}
+		.dropzone h4 {
+			margin: 0 0 6px;
+			font-size: 0.95rem;
+			font-weight: 600;
+			color: var(--primary);
+		}
+		.dropzone p {
+			font-size: 0.84rem;
+			color: var(--muted);
+		}
+		.file-chip {
+			margin-top: 14px;
+			padding: 10px 14px;
+			display: none;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+			border-radius: 10px;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			font-size: 0.88rem;
+		}
+		.modal-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 10px;
+			margin-top: 20px;
+		}
+
+		.status-banner {
+			display: none;
+			margin-top: 14px;
+			padding: 11px 14px;
+			border-radius: 10px;
+			font-size: 0.88rem;
+			line-height: 1.5;
+		}
+		.status-banner.is-visible { display: block; }
+		.status-banner.success { background: rgba(22,163,74,.08); color: var(--success); }
+		.status-banner.error   { background: rgba(220,38,38,.08); color: var(--accent); }
+		.status-banner.info    { background: rgba(0,0,0,.04); color: var(--text-secondary); }
+
+		/* ─── Responsive ─────────────────────────────────────────── */
+		@media (max-width: 1200px) {
+			.card-grid { grid-template-columns: repeat(2, 1fr); }
+		}
+		@media (max-width: 1060px) {
+			.app-shell { grid-template-columns: 1fr; }
+			.sidebar {
+				position: static;
+				height: auto;
+				flex-direction: row;
+				flex-wrap: wrap;
+				align-items: center;
+				border-right: 0;
+				border-bottom: 1px solid var(--border);
+				padding: 16px 20px;
+			}
+			.brand { margin-bottom: 0; }
+			.sidebar-section-label,
+			.sidebar-spacer,
+			.sidebar-foot { display: none; }
+			.nav-link { padding: 8px 12px; }
+			.main-shell { padding: 24px; }
+			.two-col { grid-template-columns: 1fr; }
+		}
+		@media (max-width: 680px) {
+			.main-shell { padding: 20px 16px 48px; }
+			.card-grid { grid-template-columns: 1fr; gap: 14px; }
+			.topbar { flex-direction: column; gap: 16px; margin-bottom: 24px; }
+			.topbar-right { width: 100%; }
+			.summaries-grid { grid-template-columns: 1fr; }
+			th, td { padding: 11px 12px; }
+		}
+	</style>
+	{% block extra_head %}{% endblock %}
+</head>
+<body>
+	<!-- Upload Modal -->
+	<div class="modal-backdrop" id="uploadModal">
+		<div class="upload-modal">
+			<div class="modal-head">
+				<div>
+					<div class="eyebrow"><i class="fas fa-file-arrow-up"></i> Bank Statement</div>
+					<h3 id="uploadModalTitle">Import a Statement</h3>
+					<p id="uploadModalSubtitle">Upload a PDF or CSV file. Processing begins immediately.</p>
+				</div>
+				<button class="modal-close" type="button" id="closeUploadModal">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+			<div id="csrfContainer" style="display:none;">{% csrf_token %}</div>
+
+			<!-- Normal upload zone (hidden once password is needed) -->
+			<div id="uploadZoneWrap">
+				<div class="dropzone" id="dropzone">
+					<div class="dropzone-icon"><i class="fas fa-file-arrow-up"></i></div>
+					<h4>Drop your file here</h4>
+					<p>Accepted: PDF and CSV</p>
+					<div style="margin-top:16px;">
+						<button class="ghost-btn" type="button" id="pickFileBtn">
+							<i class="fas fa-folder-open"></i> Browse Files
+						</button>
+					</div>
+					<input type="file" id="statementFileInput" accept=".pdf,.csv" hidden>
+					<div class="file-chip" id="fileChip">
+						<span id="selectedFileName"></span>
+						<button class="ghost-btn" type="button" id="clearFileBtn" style="padding:4px 12px; font-size:.8rem;">Clear</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Password entry (shown only when PDF is password-protected) -->
+			<div id="passwordWrap" style="display:none; margin-top:4px;">
+				<div style="padding:20px; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius);">
+					<div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+						<div style="width:36px;height:36px;border-radius:10px;background:rgba(220,38,38,.10);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+							<i class="fas fa-lock" style="color:var(--accent); font-size:.9rem;"></i>
+						</div>
+						<div>
+							<div style="font-weight:600; font-size:.92rem; color:var(--primary);">Password required</div>
+							<div style="font-size:.80rem; color:var(--muted);" id="passwordHint">This PDF is password-protected.</div>
+						</div>
+					</div>
+					<div style="position:relative;">
+						<input
+							type="password"
+							id="pdfPasswordInput"
+							placeholder="Enter PDF password"
+							autocomplete="current-password"
+							style="width:100%;padding:11px 40px 11px 14px;border:1.5px solid var(--border);border-radius:10px;font:inherit;font-size:.93rem;color:var(--text);background:var(--surface);outline:none;transition:border-color 150ms ease;"
+							onkeydown="if(event.key==='Enter'){ document.getElementById('submitUploadBtn').click(); }"
+						>
+						<button type="button" id="togglePasswordVisibility"
+							style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:4px;">
+							<i class="fas fa-eye" id="togglePasswordIcon"></i>
+						</button>
+					</div>
+					<div style="margin-top:10px; font-size:.78rem; color:var(--muted);">
+						<i class="fas fa-shield-halved" style="color:var(--success);"></i>
+						Password is used only to decrypt this file — it is never stored.
+					</div>
+				</div>
+				<div style="margin-top:10px;">
+					<button class="ghost-btn" type="button" id="cancelPasswordBtn" style="font-size:.84rem;">
+						<i class="fas fa-arrow-left"></i> Choose a different file
+					</button>
+				</div>
+			</div>
+
+			<div class="status-banner" id="uploadStatus"></div>
+			<div class="modal-actions">
+				<button class="ghost-btn" type="button" id="cancelUploadBtn">Cancel</button>
+				<button class="primary-btn" type="button" id="submitUploadBtn">
+					<i class="fas fa-upload"></i> Upload Statement
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- App Shell -->
+	<div class="app-shell">
+		<aside class="sidebar">
+			<div class="brand">
+				<div class="brand-icon"><i class="fas fa-chart-line"></i></div>
+				<div>
+					<div class="brand-name">KPI<span>Console</span></div>
+					<div class="brand-tagline">Financial Intelligence</div>
+				</div>
+			</div>
+
+			<div class="sidebar-section-label">Navigation</div>
+			<a href="{% url 'dashboard' %}" class="nav-link {% if active_page == 'overview' %}is-active{% endif %}">
+				<span class="nav-link-inner"><i class="fas fa-border-all"></i> Overview</span>
+			</a>
+			<a href="{% url 'statements' %}" class="nav-link {% if active_page == 'statements' %}is-active{% endif %}">
+				<span class="nav-link-inner"><i class="fas fa-folder-open"></i> Statements</span>
+				<span class="nav-badge">{{ total_statements }}</span>
+			</a>
+			<a href="{% url 'kpi_comparison' %}" class="nav-link {% if active_page == 'analytics' %}is-active{% endif %}">
+				<span class="nav-link-inner"><i class="fas fa-chart-simple"></i> Analytics</span>
+			</a>
+			<a href="#" class="nav-link" onclick="openReportModal(); return false;">
+				<span class="nav-link-inner"><i class="fas fa-file-pdf"></i> Download Report</span>
+			</a>
+			<a href="{% url 'assistant' %}" class="nav-link {% if active_page == 'assistant' %}is-active{% endif %}">
+				<span class="nav-link-inner"><i class="fas fa-sparkles"></i> AI Assistant</span>
+			</a>
+
+			<div class="sidebar-section-label">Account</div>
+			<a href="{% url 'logout' %}" class="nav-link">
+				<span class="nav-link-inner"><i class="fas fa-right-from-bracket"></i> Sign out</span>
+			</a>
+
+			<div class="sidebar-spacer"></div>
+
+			<div class="sidebar-foot">
+				<div class="sidebar-foot-label">Statements</div>
+				<div class="sidebar-foot-stat">{{ processed_statements }} <span>/ {{ total_statements }}</span></div>
+				<p>Processed and ready for analysis.</p>
+			</div>
+		</aside>
+
+		<main class="main-shell">
+			<div class="topbar">
+				<div>
+					<div class="eyebrow">{% block eyebrow %}Financial Command Center{% endblock %}</div>
+					<h1 class="page-title" id="pageTitle">{% block page_title %}Good <em id="greetingPart">day</em>, {{ user.get_full_name|default:user.username }}{% endblock %}</h1>
+					<div class="subtitle">{% block subtitle %}Your financial workspace is live and ready.{% endblock %}</div>
+				</div>
+				<div class="topbar-right">
+					<div class="pill"><span class="status-dot"></span> {{ user.username }}</div>
+					<button class="ghost-btn" type="button" onclick="window.location.reload()">
+						<i class="fas fa-rotate-right"></i> Refresh
+					</button>
+				</div>
+			</div>
+
+			<div class="content-area">
+				{% block page_actions %}{% endblock %}
+				{% block content %}{% endblock %}
+			</div>
+		</main>
+	</div>
+
+	<!-- Report Modal -->
+	<div class="modal-backdrop" id="reportModal">
+		<div class="upload-modal">
+			<div class="modal-head">
+				<div>
+					<div class="eyebrow"><i class="fas fa-file-pdf"></i> Export</div>
+					<h3>Generate Report</h3>
+					<p>Create a comprehensive PDF analysis from your statements.</p>
+				</div>
+				<button type="button" class="modal-close" onclick="closeReportModal()">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+			<form target="_blank" method="GET" action="{% url 'download_report' %}" onsubmit="closeReportModal()">
+				<div style="margin-bottom:20px;">
+					<label style="display:block;font-size:0.80rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Timeframe</label>
+					<select name="timeframe" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);font-size:0.92rem;background:var(--surface);color:var(--text);outline:none;">
+						<option value="all">All Time</option>
+						<option value="last_30_days">Last 30 Days</option>
+						<option value="ytd">Year to Date</option>
+					</select>
+				</div>
+				<div class="status-banner info is-visible" style="margin-bottom:16px;">
+					<i class="fas fa-circle-info"></i> AI compilation takes 10–20 seconds.
+				</div>
+				<div class="modal-actions">
+					<button type="button" class="ghost-btn" onclick="closeReportModal()">Cancel</button>
+					<button type="submit" class="primary-btn">
+						<i class="fas fa-file-pdf"></i> Generate PDF
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<script>
+		/* ─── Modals ───────────────────────────────────────────── */
+		const reportModal = document.getElementById('reportModal');
+		function openReportModal()  { reportModal.classList.add('is-open'); }
+		function closeReportModal() { reportModal.classList.remove('is-open'); }
+
+		const uploadModal         = document.getElementById('uploadModal');
+		const closeUploadModalBtn = document.getElementById('closeUploadModal');
+		const cancelUploadBtn     = document.getElementById('cancelUploadBtn');
+		const dropzone            = document.getElementById('dropzone');
+		const fileInput           = document.getElementById('statementFileInput');
+		const pickFileBtn         = document.getElementById('pickFileBtn');
+		const clearFileBtn        = document.getElementById('clearFileBtn');
+		const fileChip            = document.getElementById('fileChip');
+		const selectedFileName    = document.getElementById('selectedFileName');
+		const submitUploadBtn     = document.getElementById('submitUploadBtn');
+		const uploadStatus        = document.getElementById('uploadStatus');
+		const csrfInput           = document.querySelector('#csrfContainer input[name="csrfmiddlewaretoken"]');
+		const openUploadModalBtn  = document.getElementById('openUploadModal');
+
+		// Password-related elements
+		const uploadZoneWrap          = document.getElementById('uploadZoneWrap');
+		const passwordWrap            = document.getElementById('passwordWrap');
+		const pdfPasswordInput        = document.getElementById('pdfPasswordInput');
+		const passwordHint            = document.getElementById('passwordHint');
+		const cancelPasswordBtn       = document.getElementById('cancelPasswordBtn');
+		const togglePasswordVisibility= document.getElementById('togglePasswordVisibility');
+		const togglePasswordIcon      = document.getElementById('togglePasswordIcon');
+		const uploadModalTitle        = document.getElementById('uploadModalTitle');
+		const uploadModalSubtitle     = document.getElementById('uploadModalSubtitle');
+
+		function openUploadModal()  { uploadModal.classList.add('is-open'); }
+		function closeUploadModal() {
+			uploadModal.classList.remove('is-open');
+			resetToNormalUpload();
+		}
+
+		function setUploadStatus(msg, tone) {
+			uploadStatus.innerHTML = msg;
+			uploadStatus.className = `status-banner is-visible ${tone}`;
+		}
+		function clearUploadStatus() {
+			uploadStatus.className = 'status-banner';
+			uploadStatus.textContent = '';
+		}
+		function syncFileChip(file) {
+			if (!file) { fileChip.style.display = 'none'; selectedFileName.textContent = ''; return; }
+			fileChip.style.display = 'flex';
+			selectedFileName.textContent = `${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB)`;
+		}
+		function getSelectedFile() {
+			return fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
+		}
+
+		function showPasswordPrompt(hint, isWrong = false) {
+			uploadZoneWrap.style.display = 'none';
+			passwordWrap.style.display = 'block';
+			uploadModalTitle.textContent = isWrong ? 'Wrong password' : 'Password required';
+			uploadModalSubtitle.textContent = isWrong
+				? 'The password you entered was incorrect. Please try again.'
+				: 'This PDF is password-protected.';
+			passwordHint.textContent = hint;
+			if (isWrong) {
+				pdfPasswordInput.style.borderColor = 'var(--accent)';
+				pdfPasswordInput.value = '';
+			}
+			pdfPasswordInput.focus();
+		}
+
+		function resetToNormalUpload() {
+			uploadZoneWrap.style.display = 'block';
+			passwordWrap.style.display = 'none';
+			uploadModalTitle.textContent = 'Import a Statement';
+			uploadModalSubtitle.textContent = 'Upload a PDF or CSV file. Processing begins immediately.';
+			pdfPasswordInput.value = '';
+			pdfPasswordInput.style.borderColor = '';
+			fileInput.value = '';
+			syncFileChip(null);
+			clearUploadStatus();
+		}
+
+		// Toggle password visibility
+		togglePasswordVisibility.addEventListener('click', () => {
+			const isText = pdfPasswordInput.type === 'text';
+			pdfPasswordInput.type = isText ? 'password' : 'text';
+			togglePasswordIcon.className = isText ? 'fas fa-eye' : 'fas fa-eye-slash';
+		});
+
+		cancelPasswordBtn.addEventListener('click', resetToNormalUpload);
+
+		async function uploadSelectedFile() {
+			const file = getSelectedFile();
+			if (!file) { setUploadStatus('Choose a PDF or CSV before uploading.', 'error'); return; }
+
+			const formData = new FormData();
+			formData.append('bank_statement', file);
+
+			// Include password if password prompt is visible
+			const passwordVisible = passwordWrap.style.display !== 'none';
+			if (passwordVisible) {
+				const pwd = pdfPasswordInput.value.trim();
+				if (!pwd) {
+					setUploadStatus('Please enter the PDF password.', 'error');
+					pdfPasswordInput.focus();
+					return;
+				}
+				formData.append('pdf_password', pwd);
+			}
+
+			submitUploadBtn.disabled = true;
+			submitUploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
+			setUploadStatus('Importing and processing statement…', 'info');
+
+			try {
+				const response = await fetch('{% url "upload" %}', {
+					method: 'POST',
+					body: formData,
+					headers: { 'X-CSRFToken': csrfInput ? csrfInput.value : '', 'Accept': 'application/json' },
+					credentials: 'same-origin'
+				});
+				const payload = await response.json();
+
+				if (payload.password_required) {
+					// PDF needs a password — show the password prompt
+					clearUploadStatus();
+					showPasswordPrompt(payload.error || 'Enter the PDF password to continue.', !!payload.wrong_password);
+					return;
+				}
+
+				if (!response.ok || !payload.success) throw new Error(payload.error || 'Upload failed.');
+
+				setUploadStatus('<i class="fas fa-circle-check"></i> ' + (payload.message || 'Upload complete.'), 'success');
+				setTimeout(() => { window.location.href = payload.redirect_url || '{% url "statements" %}'; }, 900);
+
+			} catch (error) {
+				setUploadStatus('<i class="fas fa-circle-exclamation"></i> ' + (error.message || 'Upload failed.'), 'error');
+			} finally {
+				submitUploadBtn.disabled = false;
+				submitUploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Statement';
+			}
+		}
+
+		if (openUploadModalBtn) openUploadModalBtn.addEventListener('click', openUploadModal);
+		closeUploadModalBtn.addEventListener('click', closeUploadModal);
+		cancelUploadBtn.addEventListener('click', closeUploadModal);
+		pickFileBtn.addEventListener('click', () => fileInput.click());
+		clearFileBtn.addEventListener('click', () => { fileInput.value = ''; syncFileChip(null); clearUploadStatus(); });
+		submitUploadBtn.addEventListener('click', uploadSelectedFile);
+		fileInput.addEventListener('change', () => { syncFileChip(getSelectedFile()); clearUploadStatus(); });
+		uploadModal.addEventListener('click', (e) => { if (e.target === uploadModal) closeUploadModal(); });
+
+		['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('is-dragging'); }));
+		['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('is-dragging'); }));
+		dropzone.addEventListener('drop', e => {
+			const files = e.dataTransfer.files;
+			if (files && files.length) {
+				const t = new DataTransfer(); t.items.add(files[0]);
+				fileInput.files = t.files;
+				syncFileChip(files[0]); clearUploadStatus();
+			}
+		});
+
+		/* ─── Greeting ─────────────────────────────────────────── */
+		(function () {
+			const el = document.getElementById('greetingPart');
+			if (!el) return;
+			const h = new Date().getHours();
+			el.textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+		})();
+	</script>
+	{% block extra_scripts %}{% endblock %}
+</body>
+</html>

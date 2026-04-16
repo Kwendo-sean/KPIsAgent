@@ -1,0 +1,6 @@
+FAILED: gemini-2.0-flash => 404 This model models/gemini-2.0-flash is no longer available to new users. Please update your code to use a newer model
+FAILED: gemini-1.5-flash-latest => 404 models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call Li
+FAILED: gemini-pro => 404 models/gemini-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to s
+FAILED: models/gemini-2.0-flash => 404 This model models/gemini-2.0-flash is no longer available to new users. Please update your code to use a newer model
+FAILED: models/gemini-pro => 404 models/gemini-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to s
+FAILED: gemini-2.0-flash-lite => 404 This model models/gemini-2.0-flash-lite is no longer available to new users. Please update your code to use a newer 

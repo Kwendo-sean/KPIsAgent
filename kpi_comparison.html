@@ -1,0 +1,567 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Analytics | KPIConsole{% endblock %}
+{% block eyebrow %}Analytics{% endblock %}
+{% block page_title %}Strategic <em>insights</em>{% endblock %}
+{% block subtitle %}Trend analysis, projections, and efficiency benchmarks across all processed statements.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .full-row { grid-column: 1 / -1; }
+
+    .analytics-stat-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .a-stat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+    }
+    .a-stat-label {
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+    }
+    .a-stat-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        letter-spacing: -.02em;
+        color: var(--primary);
+        line-height: 1;
+    }
+    .a-stat-sub {
+        font-size: .78rem;
+        color: var(--muted);
+        margin-top: 6px;
+    }
+    .a-stat-good  .a-stat-value { color: var(--success); }
+    .a-stat-bad   .a-stat-value { color: var(--accent); }
+
+    .metric-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .metric-chip {
+        padding: 6px 14px;
+        border-radius: 99px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--muted);
+        font: inherit;
+        font-size: .78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 150ms ease;
+    }
+    .metric-chip.is-active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    .metric-chip:hover:not(.is-active) {
+        background: var(--surface-alt);
+        border-color: var(--accent);
+        color: var(--primary);
+    }
+
+    .panel-header-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .chart-box-lg { height: 360px; }
+    .chart-box-sm { height: 300px; }
+
+    .kpi-compare-table td:not(:first-child) { text-align: right; }
+    .kpi-compare-table .num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: .84rem;
+    }
+
+    .no-data-analytics {
+        padding: 72px 48px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+    }
+
+    @media (max-width: 1024px) {
+        .analytics-grid { grid-template-columns: 1fr; }
+        .full-row { grid-column: auto; }
+        .analytics-stat-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+        .analytics-stat-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if statements %}
+
+<!-- Stat Row -->
+<div class="analytics-stat-row">
+    <div class="a-stat">
+        <div class="a-stat-label">Projected Revenue</div>
+        <div class="a-stat-value" id="projRev">—</div>
+        <div class="a-stat-sub">Next period estimate</div>
+    </div>
+    <div class="a-stat">
+        <div class="a-stat-label">Revenue / Transaction</div>
+        <div class="a-stat-value" id="effScore">—</div>
+        <div class="a-stat-sub">Avg KES per transaction</div>
+    </div>
+    <div class="a-stat">
+        <div class="a-stat-label">Net Accumulation</div>
+        <div class="a-stat-value" id="netAcc">—</div>
+        <div class="a-stat-sub">Cumulative net profit</div>
+    </div>
+    <div class="a-stat">
+        <div class="a-stat-label">Trend Direction</div>
+        <div class="a-stat-value" id="trendStatus" style="font-size:1rem;">—</div>
+        <div class="a-stat-sub">Based on revenue slope</div>
+    </div>
+</div>
+
+<div class="analytics-grid">
+
+    <!-- 1. Historical Performance Explorer -->
+    <div class="panel full-row">
+        <div class="panel-header-flex">
+            <div>
+                <h2 class="panel-title"><i class="fas fa-chart-bar"></i> Historical Performance</h2>
+                <div class="panel-note" style="margin-top:4px;">Compare metrics across all processed periods</div>
+            </div>
+            <div class="metric-selector" id="metricSelector">
+                <button class="metric-chip is-active" type="button" data-metric="0">Revenue</button>
+                <button class="metric-chip" type="button" data-metric="1">Expenses</button>
+                <button class="metric-chip" type="button" data-metric="2">Net Income</button>
+                <button class="metric-chip" type="button" data-metric="3">Profit Margin %</button>
+            </div>
+        </div>
+        <div class="chart-box-lg">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 2. Revenue & Expense Projections -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-chart-line"></i> Growth Projections</h2>
+            <span class="panel-note">Revenue vs expense trend + 2-period forecast</span>
+        </div>
+        <div class="chart-box-sm">
+            <canvas id="projectionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 3. Performance Benchmark: Latest vs Average horizontal bars -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-bars-progress"></i> Latest vs Average</h2>
+            <span class="panel-note">How the most recent period compares to your historical average</span>
+        </div>
+        <div id="benchmarkLegend" style="display:flex;gap:16px;margin-bottom:14px;font-size:.78rem;color:var(--muted);flex-wrap:wrap;"></div>
+        <div id="benchmarkBars" style="display:flex;flex-direction:column;gap:14px;"></div>
+    </div>
+
+    <!-- 4. Cumulative Profit -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-layer-group"></i> Capital Accumulation</h2>
+            <span class="panel-note">Cumulative net profit over time</span>
+        </div>
+        <div class="chart-box-sm">
+            <canvas id="cumulativeChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 5. Efficiency -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-bolt"></i> Operating Efficiency</h2>
+            <span class="panel-note">Revenue generated per transaction</span>
+        </div>
+        <div class="chart-box-sm">
+            <canvas id="efficiencyChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- KPI data for the table — must live OUTSIDE the <table> element -->
+{{ kpi_comparison_json|safe|json_script:"temp_kpi" }}
+
+<!-- Full Data Matrix -->
+<div class="panel">
+    <div class="panel-head">
+        <h2 class="panel-title"><i class="fas fa-table"></i> Detailed Period Matrix</h2>
+        <span class="panel-note">All KPIs by statement period</span>
+    </div>
+    <div class="table-wrap">
+        <table class="kpi-compare-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    {% for s in statements %}
+                    <th style="text-align:right;">
+                        {% if s.statement_period_start %}{{ s.statement_period_start|date:"M Y" }}{% else %}{{ s.upload_date|date:"M Y" }}{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody id="kpiTableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<div class="no-data-analytics">
+    <div class="empty-state-icon" style="margin:0 auto 24px;"><i class="fas fa-chart-line"></i></div>
+    <h3>No Processed Statements</h3>
+    <p>Upload at least one processed bank statement to unlock trend analysis, projections, and efficiency benchmarks.</p>
+    <div style="margin-top:28px;">
+        <button class="primary-btn" type="button" id="openUploadModal">
+            <i class="fas fa-plus"></i> Import Statement
+        </button>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if statements %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    // ── Data ──────────────────────────────────────────────────────────
+    const chartLabels   = {{ chart_labels_json|safe }};
+    const chartDatasets = {{ chart_datasets_json|safe }};
+    const projLabels    = {{ projection_labels_json|safe }};
+    const revProj       = {{ revenue_projection_json|safe }};
+    const expProj       = {{ expense_projection_json|safe }};
+    const cumProfit     = {{ cumulative_profit_json|safe }};
+    const effData       = {{ efficiency_data_json|safe }};
+
+    // ── Design tokens (matching CSS vars) ────────────────────────────
+    const C_PRIMARY  = '#0D0D0D';
+    const C_ACCENT   = '#DC2626';
+    const C_SUCCESS  = '#16A34A';
+    const C_WARNING  = '#D97706';
+    const C_MUTED    = '#6B6B6B';
+    const C_BORDER   = '#E3E3E3';
+    const C_SURFACE  = '#F8F8F8';
+
+    const METRIC_COLORS = [C_SUCCESS, C_ACCENT, C_PRIMARY, C_WARNING];
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    const fontBase = { family: "'Inter', system-ui, sans-serif", size: 11, weight: '500' };
+
+    function kesFormatter(v) {
+        if (Math.abs(v) >= 1_000_000) return 'KES ' + (v / 1_000_000).toFixed(1) + 'M';
+        if (Math.abs(v) >= 1_000)     return 'KES ' + (v / 1_000).toFixed(0) + 'k';
+        return 'KES ' + v.toLocaleString(undefined, {maximumFractionDigits: 0});
+    }
+
+    const sharedOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#fff',
+                borderColor: C_BORDER,
+                borderWidth: 1,
+                titleColor: C_PRIMARY,
+                bodyColor: C_MUTED,
+                padding: 10,
+                callbacks: {
+                    label: ctx => ' ' + kesFormatter(ctx.parsed.y ?? ctx.parsed)
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                border: { display: false },
+                ticks: { color: C_MUTED, font: fontBase }
+            },
+            y: {
+                grid: { color: C_BORDER, lineWidth: 1 },
+                border: { display: false, dash: [4, 4] },
+                ticks: { color: C_MUTED, font: fontBase, callback: kesFormatter }
+            }
+        }
+    };
+
+    // ── Stat Cards ────────────────────────────────────────────────────
+    const projRevVal = revProj.filter(v => v !== null).slice(-1)[0] || 0;
+    document.getElementById('projRev').textContent = kesFormatter(projRevVal);
+    document.getElementById('netAcc').textContent  = kesFormatter(cumProfit.slice(-1)[0] || 0);
+    const avgEff = effData.length ? effData.reduce((a,b) => a+b, 0) / effData.length : 0;
+    document.getElementById('effScore').textContent = kesFormatter(avgEff);
+
+    // Trend: positive if last revenue > first revenue
+    const revOnly = (chartDatasets[0]?.data || []).filter(v => v != null);
+    const trendUp = revOnly.length >= 2 && revOnly[revOnly.length-1] >= revOnly[0];
+    const trendEl = document.getElementById('trendStatus');
+    trendEl.innerHTML = trendUp
+        ? '<i class="fas fa-arrow-trend-up" style="color:var(--success)"></i> Positive'
+        : '<i class="fas fa-arrow-trend-down" style="color:var(--accent)"></i> Declining';
+
+    // ── 1. Main Historical Bar Chart ──────────────────────────────────
+    let activeIdx = 0;
+    const mainCtx = document.getElementById('mainChart').getContext('2d');
+    const mainChart = new Chart(mainCtx, {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: chartDatasets[0]?.label || 'Revenue',
+                data: chartDatasets[0]?.data || [],
+                backgroundColor: METRIC_COLORS[0],
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            ...sharedOpts,
+            plugins: {
+                ...sharedOpts.plugins,
+                legend: { display: false },
+            }
+        }
+    });
+
+    document.querySelectorAll('.metric-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.metric-chip').forEach(c => c.classList.remove('is-active'));
+            chip.classList.add('is-active');
+            activeIdx = parseInt(chip.dataset.metric, 10);
+            const ds = chartDatasets[activeIdx] || {};
+            mainChart.data.datasets[0].label = ds.label || '';
+            mainChart.data.datasets[0].data  = ds.data  || [];
+            mainChart.data.datasets[0].backgroundColor = METRIC_COLORS[activeIdx % METRIC_COLORS.length];
+            mainChart.update('active');
+        });
+    });
+
+    // ── 2. Projection Line Chart ──────────────────────────────────────
+    const splitIdx = chartLabels.length - 1;
+
+    new Chart(document.getElementById('projectionChart'), {
+        type: 'line',
+        data: {
+            labels: projLabels,
+            datasets: [
+                {
+                    label: 'Revenue',
+                    data: revProj,
+                    borderColor: C_SUCCESS,
+                    backgroundColor: 'rgba(22,163,74,.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: ctx => ctx.dataIndex === splitIdx ? 5 : 3,
+                    pointBackgroundColor: C_SUCCESS,
+                    segment: {
+                        borderDash: ctx => ctx.p0DataIndex >= splitIdx ? [6, 4] : undefined,
+                        borderColor: ctx => ctx.p0DataIndex >= splitIdx ? 'rgba(22,163,74,.5)' : C_SUCCESS,
+                    }
+                },
+                {
+                    label: 'Expenses',
+                    data: expProj,
+                    borderColor: C_ACCENT,
+                    backgroundColor: 'transparent',
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: C_ACCENT,
+                    segment: {
+                        borderDash: ctx => ctx.p0DataIndex >= splitIdx ? [6, 4] : undefined,
+                        borderColor: ctx => ctx.p0DataIndex >= splitIdx ? 'rgba(220,38,38,.5)' : C_ACCENT,
+                    }
+                }
+            ]
+        },
+        options: {
+            ...sharedOpts,
+            plugins: {
+                ...sharedOpts.plugins,
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { boxWidth: 10, color: C_MUTED, font: fontBase, usePointStyle: true }
+                },
+                tooltip: { ...sharedOpts.plugins.tooltip }
+            }
+        }
+    });
+
+    // ── 3. Latest vs Average horizontal benchmark bars ────────────────
+    (function buildBenchmark() {
+        const metrics = [
+            { label: 'Revenue',     idx: 0, color: C_SUCCESS },
+            { label: 'Expenses',    idx: 1, color: C_ACCENT  },
+            { label: 'Net Income',  idx: 2, color: C_PRIMARY },
+            { label: 'Profit Margin', idx: 3, color: C_WARNING },
+        ];
+
+        const legend = document.getElementById('benchmarkLegend');
+        legend.innerHTML = `
+            <span style="display:flex;align-items:center;gap:5px;">
+                <span style="width:12px;height:12px;border-radius:3px;background:var(--primary);flex-shrink:0;"></span> Latest period
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;">
+                <span style="width:12px;height:3px;background:var(--muted);flex-shrink:0;border-radius:2px;"></span> Historical average
+            </span>`;
+
+        const container = document.getElementById('benchmarkBars');
+        container.innerHTML = '';
+
+        metrics.forEach(({ label, idx, color }) => {
+            const data = chartDatasets[idx]?.data || [];
+            if (!data.length) return;
+
+            const latest = data[data.length - 1] || 0;
+            const avg    = data.reduce((a, b) => a + b, 0) / data.length || 1;
+            const max    = Math.max(Math.abs(latest), Math.abs(avg), 1);
+
+            const latestPct = Math.min(Math.abs(latest) / max * 100, 100);
+            const avgPct    = Math.min(Math.abs(avg)    / max * 100, 100);
+            const isNeg     = latest < 0;
+
+            const diff    = latest - avg;
+            const diffPct = avg !== 0 ? ((diff / Math.abs(avg)) * 100).toFixed(1) : '—';
+            const arrow   = diff >= 0 ? '▲' : '▼';
+            const arrowColor = diff >= 0 ? 'var(--success)' : 'var(--accent)';
+
+            container.insertAdjacentHTML('beforeend', `
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+                        <span style="font-size:.82rem;font-weight:600;color:var(--text-secondary);">${label}</span>
+                        <span style="font-size:.78rem;color:${arrowColor};font-weight:600;">${arrow} ${diffPct}% vs avg</span>
+                    </div>
+                    <div style="position:relative;height:22px;background:var(--surface-alt);border-radius:6px;overflow:hidden;">
+                        <!-- avg marker -->
+                        <div style="position:absolute;left:${avgPct}%;top:0;bottom:0;width:2px;background:var(--muted);z-index:2;"></div>
+                        <!-- latest bar -->
+                        <div style="width:${latestPct}%;height:100%;background:${isNeg ? 'var(--accent)' : color};border-radius:6px;opacity:.85;transition:width .5s ease;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:.74rem;color:var(--muted);">
+                        <span>Latest: <strong style="color:var(--text);">${kesFormatter(latest)}</strong></span>
+                        <span>Avg: ${kesFormatter(avg)}</span>
+                    </div>
+                </div>`);
+        });
+
+        if (!container.innerHTML) {
+            container.innerHTML = '<p style="color:var(--muted);font-size:.88rem;">Not enough data yet — upload at least 2 statements to compare.</p>';
+        }
+    })();
+
+    // ── 4. Cumulative Area Chart ──────────────────────────────────────
+    new Chart(document.getElementById('cumulativeChart'), {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Cumulative Net Profit',
+                data: cumProfit,
+                borderColor: C_PRIMARY,
+                backgroundColor: ctx => {
+                    const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+                    g.addColorStop(0, 'rgba(13,13,13,.15)');
+                    g.addColorStop(1, 'rgba(13,13,13,.01)');
+                    return g;
+                },
+                fill: 'origin',
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: C_PRIMARY,
+            }]
+        },
+        options: {
+            ...sharedOpts,
+            plugins: {
+                ...sharedOpts.plugins,
+                legend: { display: false }
+            }
+        }
+    });
+
+    // ── 5. Efficiency Bar Chart ───────────────────────────────────────
+    new Chart(document.getElementById('efficiencyChart'), {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'KES / Transaction',
+                data: effData,
+                backgroundColor: ctx => {
+                    const v = effData[ctx.dataIndex] || 0;
+                    const max = Math.max(...effData.filter(Boolean));
+                    const alpha = 0.35 + 0.65 * (v / (max || 1));
+                    return `rgba(220,38,38,${alpha.toFixed(2)})`;
+                },
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            ...sharedOpts,
+            plugins: {
+                ...sharedOpts.plugins,
+                legend: { display: false }
+            }
+        }
+    });
+
+    // ── Period Matrix table population ───────────────────────────────
+    // json_script lives OUTSIDE the table (browsers reject script-in-tbody)
+    // so we populate the tbody here, after Chart.js initialisation.
+    (function buildKpiTable() {
+        const el = document.getElementById('temp_kpi');
+        if (!el) return;
+        const data = JSON.parse(el.textContent || '{}');
+        const tbody = document.getElementById('kpiTableBody');
+        if (!tbody) return;
+
+        const keys = Object.keys(data);
+        if (!keys.length) {
+            tbody.innerHTML = '<tr><td colspan="99" style="text-align:center;color:var(--muted);padding:32px;">No KPI data yet — upload and process a statement first.</td></tr>';
+            return;
+        }
+
+        keys.forEach(metric => {
+            const entries = data[metric] || [];
+            let html = `<tr><td style="font-weight:500;white-space:nowrap;">${metric}</td>`;
+            entries.forEach(e => {
+                const v = typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0;
+                const formatted = v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                html += `<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:.84rem;">${formatted} <span style="color:var(--muted);font-size:.7rem;">${e.unit || ''}</span></td>`;
+            });
+            html += '</tr>';
+            tbody.insertAdjacentHTML('beforeend', html);
+        });
+    })();
+</script>
+{% endif %}
+{% endblock %}

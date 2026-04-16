@@ -1,0 +1,349 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}{{ statement.file_name }} | KPIConsole{% endblock %}
+{% block eyebrow %}Statement Detail{% endblock %}
+{% block page_title %}{{ statement.file_name }}{% endblock %}
+{% block subtitle %}KPIs, transactions, and AI analysis for one imported statement.{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ── Summary strip ─────────────────────────────────────── */
+    .summary-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    @media (max-width: 1100px) { .summary-strip { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px)  { .summary-strip { grid-template-columns: 1fr; } }
+
+    .info-tile {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+    }
+    .info-tile .label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+    }
+    .info-tile .value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1.2;
+    }
+    .info-tile .value.mono { font-family: "JetBrains Mono", monospace; }
+
+    /* ── KPI groups ─────────────────────────────────────────── */
+    .kpi-groups { display: grid; gap: 24px; }
+    .kpi-group-title {
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .kpi-group-title::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border-soft);
+    }
+    .kpi-row-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 12px;
+    }
+    .kpi-tile {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-tile::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        background: var(--kpi-bar, var(--accent));
+    }
+    .kpi-name { font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+    .kpi-val  {
+        font-size: 1.25rem;
+        font-weight: 700;
+        font-family: "JetBrains Mono", monospace;
+        font-variant-numeric: tabular-nums;
+        color: var(--kpi-val-color, var(--primary));
+        line-height: 1.1;
+    }
+    .kpi-unit { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+    /* Colour helpers wired via inline style */
+    .kpi-tile.good  { --kpi-bar: var(--success); --kpi-val-color: var(--success); }
+    .kpi-tile.warn  { --kpi-bar: var(--warning); --kpi-val-color: var(--warning); }
+    .kpi-tile.bad   { --kpi-bar: #C0392B;        --kpi-val-color: #C0392B; }
+    .kpi-tile.neutral { --kpi-bar: var(--accent); }
+
+    /* ── Tabs for transactions/analyses ─── */
+    .tab-bar {
+        display: flex;
+        gap: 4px;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 20px;
+    }
+    .tab-btn {
+        padding: 10px 20px;
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--muted);
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        cursor: pointer;
+        border-radius: 8px 8px 0 0;
+        transition: color 140ms ease, border-color 140ms ease;
+    }
+    .tab-btn.is-active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-pane { display: none; }
+    .tab-pane.is-active { display: block; }
+
+    /* Transaction type badges */
+    .tx-deposit    { background: rgba(46,125,94,.1); color: var(--success); }
+    .tx-withdrawal { background: rgba(217,119,6,.12); color: var(--warning); }
+    .tx-transfer   { background: rgba(44,122,92,.08); color: var(--accent); }
+
+    /* Analysis card */
+    .analysis-card {
+        padding: 18px 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 14px;
+    }
+    .analysis-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
+    .analysis-card pre { white-space: pre-wrap; word-break: break-word; margin: 10px 0 0; font: inherit; line-height: 1.6; color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── Summary strip ─────────────────────────────────────── -->
+<div class="summary-strip">
+    <div class="info-tile">
+        <div class="label">Period</div>
+        <div class="value">
+            {% if statement.statement_period_start %}
+                {{ statement.statement_period_start }} — {{ statement.statement_period_end }}
+            {% else %}—{% endif %}
+        </div>
+    </div>
+    <div class="info-tile">
+        <div class="label">Opening Balance</div>
+        <div class="value mono">{{ currency_symbol }} {{ statement.opening_balance|floatformat:2 }}</div>
+    </div>
+    <div class="info-tile">
+        <div class="label">Closing Balance</div>
+        <div class="value mono">{{ currency_symbol }} {{ statement.closing_balance|floatformat:2 }}</div>
+    </div>
+    <div class="info-tile">
+        <div class="label">Status</div>
+        <div class="value">
+            {% if statement.is_processed %}
+            <span class="tag success">Processed</span>
+            {% else %}
+            <span class="tag danger">Failed</span>
+            {% if statement.processing_error %}
+            <div style="font-size:.8rem; color:var(--muted); margin-top:6px; font-weight:400;">{{ statement.processing_error }}</div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ── KPI Groups ─────────────────────────────────────────── -->
+{% if kpi_groups %}
+<div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-head">
+        <h2 class="panel-title">KPI Snapshot</h2>
+        <span class="panel-note">{{ kpis|length }} metrics — <a class="link-btn" href="{% url 'statements' %}">Back to statements</a></span>
+    </div>
+    <div class="kpi-groups">
+        {% if kpi_groups.REVENUE %}
+        <div>
+            <div class="kpi-group-title"><i class="fas fa-arrow-trend-up"></i> Revenue</div>
+            <div class="kpi-row-grid">
+                {% for kpi in kpi_groups.REVENUE %}
+                <div class="kpi-tile {% if kpi.current_value > 0 %}good{% else %}neutral{% endif %}">
+                    <div class="kpi-name">{{ kpi.metric_name }}</div>
+                    <div class="kpi-val">{{ kpi.current_value|floatformat:2 }}</div>
+                    <div class="kpi-unit">{{ kpi.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kpi_groups.COST %}
+        <div>
+            <div class="kpi-group-title"><i class="fas fa-arrow-trend-down"></i> Costs</div>
+            <div class="kpi-row-grid">
+                {% for kpi in kpi_groups.COST %}
+                <div class="kpi-tile {% if kpi.metric_name == 'Expense to Revenue Ratio' and kpi.current_value > 80 %}bad{% elif kpi.current_value > 0 %}warn{% else %}neutral{% endif %}">
+                    <div class="kpi-name">{{ kpi.metric_name }}</div>
+                    <div class="kpi-val">{{ kpi.current_value|floatformat:2 }}</div>
+                    <div class="kpi-unit">{{ kpi.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kpi_groups.PROFITABILITY %}
+        <div>
+            <div class="kpi-group-title"><i class="fas fa-circle-dollar-to-slot"></i> Profitability</div>
+            <div class="kpi-row-grid">
+                {% for kpi in kpi_groups.PROFITABILITY %}
+                <div class="kpi-tile {% if kpi.current_value < 0 %}bad{% elif kpi.current_value > 0 %}good{% else %}neutral{% endif %}">
+                    <div class="kpi-name">{{ kpi.metric_name }}</div>
+                    <div class="kpi-val">{{ kpi.current_value|floatformat:2 }}</div>
+                    <div class="kpi-unit">{{ kpi.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kpi_groups.CASHFLOW %}
+        <div>
+            <div class="kpi-group-title"><i class="fas fa-water"></i> Cash Flow</div>
+            <div class="kpi-row-grid">
+                {% for kpi in kpi_groups.CASHFLOW %}
+                <div class="kpi-tile {% if kpi.current_value < 0 %}bad{% elif kpi.current_value > 0 %}good{% else %}neutral{% endif %}">
+                    <div class="kpi-name">{{ kpi.metric_name }}</div>
+                    <div class="kpi-val">{{ kpi.current_value|floatformat:2 }}</div>
+                    <div class="kpi-unit">{{ kpi.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kpi_groups.EFFICIENCY %}
+        <div>
+            <div class="kpi-group-title"><i class="fas fa-bolt"></i> Efficiency</div>
+            <div class="kpi-row-grid">
+                {% for kpi in kpi_groups.EFFICIENCY %}
+                <div class="kpi-tile neutral">
+                    <div class="kpi-name">{{ kpi.metric_name }}</div>
+                    <div class="kpi-val">{{ kpi.current_value|floatformat:2 }}</div>
+                    <div class="kpi-unit">{{ kpi.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kpi_groups.FINANCIAL_HEALTH %}
+        <div>
+            <div class="kpi-group-title"><i class="fas fa-heart-pulse"></i> Financial Health</div>
+            <div class="kpi-row-grid">
+                {% for kpi in kpi_groups.FINANCIAL_HEALTH %}
+                <div class="kpi-tile {% if kpi.current_value < 0 %}bad{% elif kpi.current_value > 0 %}good{% else %}neutral{% endif %}">
+                    <div class="kpi-name">{{ kpi.metric_name }}</div>
+                    <div class="kpi-val">{{ kpi.current_value|floatformat:2 }}</div>
+                    <div class="kpi-unit">{{ kpi.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Tabs: Transactions / AI Analyses ──────────────────── -->
+<div class="panel">
+    <div class="tab-bar">
+        <button class="tab-btn is-active" type="button" data-tab="transactions">
+            <i class="fas fa-list"></i> Transactions ({{ transactions|length }})
+        </button>
+        <button class="tab-btn" type="button" data-tab="analyses">
+            <i class="fas fa-sparkles"></i> AI Analyses ({{ analyses|length }})
+        </button>
+    </div>
+
+    <!-- Transactions tab -->
+    <div class="tab-pane is-active" id="tab-transactions">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th style="text-align:right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td class="muted">{{ tx.transaction_date }}</td>
+                        <td>{{ tx.description }}</td>
+                        <td class="muted">{{ tx.category|default:"—" }}</td>
+                        <td>
+                            <span class="tag {% if tx.transaction_type == 'DEPOSIT' %}tx-deposit{% elif tx.transaction_type == 'WITHDRAWAL' %}tx-withdrawal{% else %}tx-transfer{% endif %}">
+                                {{ tx.transaction_type }}
+                            </span>
+                        </td>
+                        <td class="mono" style="text-align:right;">{{ currency_symbol }} {{ tx.amount|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="muted" style="text-align:center; padding:32px;">No transactions extracted from this statement.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Analyses tab -->
+    <div class="tab-pane" id="tab-analyses">
+        {% for analysis in analyses %}
+        <div class="analysis-card">
+            <span class="tag {% if analysis.analysis_type == 'ALERT' %}danger{% elif analysis.analysis_type == 'INSIGHT' %}info{% else %}success{% endif %}">
+                {{ analysis.analysis_type }}
+            </span>
+            <p><strong>{{ analysis.title }}</strong></p>
+            <pre>{{ analysis.content }}</pre>
+        </div>
+        {% empty %}
+        <p class="muted" style="padding:20px 0;">No AI analyses saved for this statement yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('is-active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('is-active'));
+            btn.classList.add('is-active');
+            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('is-active');
+        });
+    });
+</script>
+{% endblock %}
