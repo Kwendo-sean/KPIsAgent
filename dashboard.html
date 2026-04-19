@@ -7,44 +7,324 @@
 
 {% block extra_head %}
 <style>
-    /* Override: 3 cards per row on overview, 4th card spans full width */
-    .card-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    .stat-card.card-wide {
-        grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+    /* ── Delta badge ───────────────────────────────────────────── */
+    .stat-delta {
+        display: inline-flex;
         align-items: center;
-        min-height: 100px;
+        gap: 4px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px; font-weight: 600;
+        letter-spacing: .04em;
+        margin-top: 10px;
+        padding: 2px 7px;
+        border-radius: 4px;
     }
-    .stat-card.card-wide .stat-icon {
-        font-size: 7rem;
-        right: 12px;
-        bottom: -18px;
+    .delta-good { background: var(--mint-soft);  color: var(--good); }
+    .delta-bad  { background: var(--coral-soft); color: var(--bad); }
+
+    /* ── Stat grid (4-up) ──────────────────────────────────────── */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 16px;
     }
-    @media (max-width: 900px) {
-        .card-grid { grid-template-columns: repeat(2, 1fr); }
-        .stat-card.card-wide { grid-column: auto; grid-template-columns: 1fr; }
+
+    /* ── Health row: dial card + alerts column ─────────────────── */
+    .health-row {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 14px;
+        margin-bottom: 16px;
+        align-items: start;
     }
-    @media (max-width: 580px) {
-        .card-grid { grid-template-columns: 1fr; }
-        .stat-card.card-wide { grid-column: auto; }
+    .health-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 14px;
+    }
+    .dial-wrap {
+        position: relative;
+        width: 96px; height: 96px;
+        flex-shrink: 0;
+    }
+    .dial-wrap svg { width: 100%; height: 100%; }
+    .dial-bg   { fill: none; stroke: var(--line); stroke-width: 10; }
+    .dial-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .8s ease; }
+    .dial-label {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        line-height: 1.1;
+    }
+    .dial-score { font-size: 1.5rem; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+    .dial-unit  { font-size: .62rem; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+
+    .health-body { width: 100%; }
+    .health-tier {
+        display: inline-flex;
+        align-items: center; gap: 6px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: .12em;
+        padding: 3px 9px; border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    /* health tier tones */
+    .health-tier.tone-green    { background: var(--mint-soft);  color: var(--good); }
+    .health-tier.tone-amber    { background: var(--amber-soft); color: var(--amber); }
+    .health-tier.tone-orange   { background: var(--coral-soft); color: var(--coral); }
+    .health-tier.tone-red,
+    .health-tier.tone-critical { background: var(--coral-soft); color: var(--bad); }
+
+    .health-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .health-sub   { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .health-pills {
+        display: flex; gap: 6px; flex-wrap: wrap;
+        margin-top: 12px; justify-content: center;
+    }
+    .health-pill {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px; padding: 3px 8px; border-radius: 4px;
+        background: var(--surface-alt); color: var(--muted);
+        border: 1px solid var(--line);
+    }
+
+    /* ── Alerts column ─────────────────────────────────────────── */
+    .alerts-col {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 0 22px;
+        overflow: hidden;
+    }
+    .alerts-col-head {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 14px 0; border-bottom: 1px solid var(--line);
+    }
+    .alerts-col-title {
+        font-size: 14px; font-weight: 600; color: var(--ink);
+        display: flex; align-items: center; gap: 8px;
+    }
+    .alerts-col-title i { color: var(--green); font-size: .8rem; }
+    .alert-row {
+        display: flex; gap: 12px; padding: 12px 0;
+        border-bottom: 1px solid var(--line); align-items: flex-start;
+    }
+    .alert-row:last-child { border-bottom: none; }
+    .alert-row-title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .alert-row-sub   { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+    /* ── Data Scope filter bar ─────────────────────────────────── */
+    .scope-bar {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px 18px;
+        margin-bottom: 16px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .scope-modes { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .scope-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: .12em;
+        color: var(--subtle); white-space: nowrap; margin-right: 4px;
+    }
+    .scope-pill {
+        display: inline-flex; align-items: center;
+        padding: 5px 12px; border-radius: 5px;
+        border: 1px solid var(--line);
+        font-size: .80rem; font-weight: 500; cursor: pointer;
+        color: var(--muted); background: var(--surface-alt);
+        transition: border-color .12s, color .12s, background .12s;
+        user-select: none;
+    }
+    .scope-pill input[type=radio] { display: none; }
+    .scope-pill.is-active { background: var(--green); color: #fff; border-color: var(--green); }
+    .scope-pill:not(.is-active):hover { border-color: var(--green); color: var(--green); }
+    .scope-extras { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .scope-input {
+        padding: 5px 10px; border: 1px solid var(--line); border-radius: 5px;
+        background: var(--surface-alt); color: var(--text);
+        font-size: .82rem; font-family: "JetBrains Mono", monospace; min-width: 130px;
+    }
+    .scope-input:focus { outline: none; border-color: var(--green); }
+    .scope-sep { color: var(--muted); font-size: .8rem; }
+    .scope-apply {
+        padding: 5px 12px; background: var(--green); color: #fff;
+        border: none; border-radius: 5px; font-size: .80rem; font-weight: 600; cursor: pointer;
+    }
+    .scope-count {
+        margin-left: auto;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px; color: var(--muted);
+        display: flex; align-items: center; gap: 5px; white-space: nowrap;
+    }
+    .scope-count strong { color: var(--ink); font-weight: 600; }
+    .in-sel-dot {
+        display: inline-block; width: 6px; height: 6px;
+        border-radius: 50%; background: var(--green);
+        margin-right: 4px; vertical-align: middle;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+        .stat-grid  { grid-template-columns: repeat(2, 1fr); }
+        .health-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+        .stat-grid { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 {% if total_statements %}
-<!-- Summary Type Selector -->
+
+<!-- ── Data Scope Filter ──────────────────────────────────────── -->
+<div class="scope-bar">
+    <form method="GET" id="scopeForm" style="display:contents;">
+        <input type="hidden" name="summary_type" value="{{ summary_type }}">
+        <div class="scope-modes">
+            <span class="scope-label">Viewing</span>
+            <label class="scope-pill {% if filter_mode == 'latest' %}is-active{% endif %}">
+                <input type="radio" name="filter_mode" value="latest" {% if filter_mode == 'latest' %}checked{% endif %}>
+                Latest
+            </label>
+            <label class="scope-pill {% if filter_mode == 'all' %}is-active{% endif %}">
+                <input type="radio" name="filter_mode" value="all" {% if filter_mode == 'all' %}checked{% endif %}>
+                All
+            </label>
+            <label class="scope-pill {% if filter_mode == 'range' %}is-active{% endif %}">
+                <input type="radio" name="filter_mode" value="range" {% if filter_mode == 'range' %}checked{% endif %}>
+                Date Range
+            </label>
+            <label class="scope-pill {% if filter_mode == 'statement' %}is-active{% endif %}">
+                <input type="radio" name="filter_mode" value="statement" {% if filter_mode == 'statement' %}checked{% endif %}>
+                Statement
+            </label>
+        </div>
+        <div class="scope-extras" id="rangeInputs" {% if filter_mode != 'range' %}style="display:none;"{% endif %}>
+            <input type="date" name="from_date" value="{{ filter_from }}" class="scope-input">
+            <span class="scope-sep">→</span>
+            <input type="date" name="to_date" value="{{ filter_to }}" class="scope-input">
+            <button type="submit" class="scope-apply">Apply</button>
+        </div>
+        <div class="scope-extras" id="stmtInputs" {% if filter_mode != 'statement' %}style="display:none;"{% endif %}>
+            <select name="statement_id" class="scope-input" id="stmtSelect">
+                <option value="">— pick a statement —</option>
+                {% for opt in filter_statement_options %}
+                <option value="{{ opt.id }}" {% if opt.selected %}selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if selected_count %}
+        <div class="scope-count">
+            <i class="fas fa-file-lines"></i>
+            <strong>{{ selected_count }}</strong> statement{{ selected_count|pluralize }}
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- ── Stat Grid ──────────────────────────────────────────────── -->
+<div class="stat-grid">
+    {% for card in summary_cards %}
+    <div class="stat tone-{{ card.tone }}">
+        <div class="k">{{ card.label }}</div>
+        <div class="v">{{ card.value }}</div>
+        <div class="sub">{{ card.meta }}</div>
+        {% if card.delta %}
+        <div class="stat-delta {{ card.delta.tone }}">{{ card.delta.label }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ── Health Row: Dial + Alerts ─────────────────────────────── -->
+<div class="health-row">
+    <!-- Health score card -->
+    <div class="health-card">
+        <div class="dial-wrap">
+            <svg viewBox="0 0 100 100">
+                <circle class="dial-bg" cx="50" cy="50" r="40"/>
+                <circle class="dial-fill" cx="50" cy="50" r="40"
+                    id="dialArc"
+                    stroke="{% if health_tone == 'green' %}var(--good){% elif health_tone == 'amber' %}var(--amber){% elif health_tone == 'orange' %}var(--coral){% else %}var(--bad){% endif %}"
+                    stroke-dasharray="251.2"
+                    stroke-dashoffset="251.2"
+                    transform="rotate(-90 50 50)"/>
+            </svg>
+            <div class="dial-label">
+                <span class="dial-score" style="color:{% if health_tone == 'green' %}var(--good){% elif health_tone == 'amber' %}var(--amber){% elif health_tone == 'orange' %}var(--coral){% else %}var(--bad){% endif %};">{{ health_score }}</span>
+                <span class="dial-unit">/ 100</span>
+            </div>
+        </div>
+        <div class="health-body">
+            <div class="health-tier tone-{{ health_tone }}">
+                <i class="fas {% if health_tone == 'green' %}fa-shield-check{% elif health_tone == 'amber' %}fa-eye{% elif health_tone == 'orange' %}fa-triangle-exclamation{% else %}fa-circle-exclamation{% endif %}"></i>
+                {{ health_tier }}
+            </div>
+            <div class="health-title">Financial Health Score</div>
+            <div class="health-sub">
+                {% if health_tone == 'green' %}Strong financial position across all key metrics.
+                {% elif health_tone == 'amber' %}Acceptable — one or more metrics need monitoring.
+                {% elif health_tone == 'orange' %}Several indicators are under pressure — take action.
+                {% else %}Distressed. Immediate management attention required.{% endif %}
+            </div>
+            <div class="health-pills">
+                <span class="health-pill">Margin</span>
+                <span class="health-pill">Runway</span>
+                <span class="health-pill">Expense Ratio</span>
+                <span class="health-pill">Consistency</span>
+                <span class="health-pill">Anomalies</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts column -->
+    <div class="alerts-col">
+        <div class="alerts-col-head">
+            <div class="alerts-col-title"><i class="fas fa-bell"></i> Alert Feed</div>
+            <a class="link-btn" href="{% url 'assistant' %}">Open assistant</a>
+        </div>
+        {% for alert in alerts %}
+        <div class="alert-row">
+            <span class="tag {% if alert.severity == 'CRITICAL' %}danger{% elif alert.severity == 'WARNING' %}warning{% else %}info{% endif %}">{{ alert.severity }}</span>
+            <div>
+                <div class="alert-row-title">{{ alert.title }}</div>
+                <div class="alert-row-sub">{{ alert.content }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert-row">
+            <span class="tag success">Stable</span>
+            <div>
+                <div class="alert-row-title">No active alerts</div>
+                <div class="alert-row-sub">All metrics are within normal ranges for the selected period.</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ── Summary View Selector ─────────────────────────────────── -->
 <section class="summary-selector">
     <div class="selector-header">
-        <h2 class="panel-title"><i class="fas fa-filters"></i> Summary View</h2>
-        <span class="panel-note">Choose insights to display</span>
+        <h2 class="panel-title">Summary View</h2>
+        <span class="panel-note">{{ total_statements }} statement{{ total_statements|pluralize }}</span>
     </div>
     <div class="selector-options">
         {% for option in summary_options %}
-        <a href="?summary_type={{ option.key }}" class="selector-option {% if summary_type == option.key %}is-active{% endif %}">
+        <a href="?summary_type={{ option.key }}&filter_mode={{ filter_mode }}{% if filter_from %}&from_date={{ filter_from }}{% endif %}{% if filter_to %}&to_date={{ filter_to }}{% endif %}{% if filter_statement_id %}&statement_id={{ filter_statement_id }}{% endif %}"
+           class="selector-option {% if summary_type == option.key %}is-active{% endif %}">
             <i class="fas {{ option.icon }}"></i>
             <span>{{ option.label }}</span>
         </a>
@@ -52,105 +332,48 @@
     </div>
 </section>
 
-<section class="card-grid">
-    {% for card in summary_cards %}
-    <article class="stat-card tone-{{ card.tone }}{% if forloop.last %} card-wide{% endif %}">
-        <div>
-            <div class="stat-label">{{ card.label }}</div>
-            <div class="stat-value mono">{{ card.value }}</div>
-            <div class="stat-meta">{{ card.meta }}</div>
-        </div>
-        {% if forloop.last %}
-        <div style="text-align:center; opacity:.35; font-size:3rem; color:var(--muted);">
-            <i class="fas {{ card.icon }}"></i>
-        </div>
-        <div style="text-align:right;">
-            <span class="tag {% if 'rose' in card.tone or 'bad' in card.tone %}danger{% else %}success{% endif %}" style="font-size:.8rem; padding:6px 16px;">
-                {% if 'rose' in card.tone or 'bad' in card.tone %}Net Loss{% else %}Net Profit{% endif %}
-            </span>
-        </div>
-        {% endif %}
-        <i class="stat-icon fas {{ card.icon }}"></i>
-    </article>
-    {% endfor %}
-</section>
-
-<!-- Detailed Summaries Section -->
 {% if detailed_summaries %}
 <section class="summaries-section">
-    <div class="panel summaries-panel">
-        <div class="panel-head">
-            <h2 class="panel-title">
-                <i class="fas fa-lightbulb"></i>
-                {% if summary_type == "overview" %}Key Insights
-                {% elif summary_type == "revenue_sources" %}Revenue Analysis
-                {% elif summary_type == "expense_breakdown" %}Expense Analysis
-                {% elif summary_type == "transaction_patterns" %}Transaction Patterns
-                {% elif summary_type == "top_insights" %}Strategic Insights
-                {% endif %}
-            </h2>
-            <span class="panel-note">Based on your {{ total_statements }} statement{{ total_statements|pluralize }}</span>
-        </div>
-        <div class="summaries-grid">
-            {% for summary in detailed_summaries %}
-            <div class="summary-card tone-{{ summary.tone }}">
-                <div class="summary-header">
-                    <i class="fas {{ summary.icon }}"></i>
-                    <h3>{{ summary.title }}</h3>
-                </div>
-                <div class="summary-content">
-                    {% if summary.is_html %}
-                        {{ summary.content|safe }}
-                    {% else %}
-                        <p>{{ summary.content|safe }}</p>
-                    {% endif %}
-                    {% if summary.detail %}
-                        <span class="summary-detail">{{ summary.detail }}</span>
-                    {% endif %}
-                </div>
+    <div class="summaries-grid">
+        {% for summary in detailed_summaries %}
+        <div class="summary-card tone-{{ summary.tone }}">
+            <div class="summary-header">
+                <i class="fas {{ summary.icon }}"></i>
+                <h3>{{ summary.title }}</h3>
             </div>
-            {% endfor %}
+            <div class="summary-content">
+                {% if summary.is_html %}{{ summary.content|safe }}{% else %}<p>{{ summary.content|safe }}</p>{% endif %}
+                {% if summary.detail %}<span class="summary-detail">{{ summary.detail }}</span>{% endif %}
+            </div>
         </div>
+        {% endfor %}
     </div>
 </section>
 {% endif %}
 
-<section class="two-col">
+<!-- ── Charts ─────────────────────────────────────────────────── -->
+<section class="two-col" style="margin-top:16px;">
     <div class="panel">
         <div class="panel-head">
-            <h2 class="panel-title">Revenue vs Expenses</h2>
-            <span class="panel-note">All processed statements</span>
+            <h2 class="panel-title"><i class="fas fa-chart-column"></i> Revenue vs Expenses</h2>
+            <span class="panel-note">{{ selected_count }} statement{{ selected_count|pluralize }}</span>
         </div>
-        <div class="chart-box">
-            <canvas id="cashPositionChart"></canvas>
-        </div>
+        <div class="chart-box"><canvas id="cashPositionChart"></canvas></div>
     </div>
     <div class="panel">
         <div class="panel-head">
-            <h2 class="panel-title">Alert Feed</h2>
-            <a class="link-btn" href="{% url 'assistant' %}">Open assistant</a>
+            <h2 class="panel-title"><i class="fas fa-chart-pie"></i> Expense Mix</h2>
+            <span class="panel-note">{% if filter_mode == 'latest' %}Latest{% elif filter_mode == 'all' %}All statements{% elif filter_mode == 'range' %}Range{% else %}Statement{% endif %}</span>
         </div>
-        <div class="alert-stack">
-            {% for alert in alerts %}
-            <div class="alert-card">
-                <span class="tag {% if alert.severity == 'CRITICAL' %}danger{% elif alert.severity == 'WARNING' %}warning{% else %}info{% endif %}">{{ alert.severity }}</span>
-                <p><strong>{{ alert.title }}</strong></p>
-                <p>{{ alert.content }}</p>
-            </div>
-            {% empty %}
-            <div class="alert-card">
-                <span class="tag success">Stable</span>
-                <p>No active alerts for the latest processed statement.</p>
-            </div>
-            {% endfor %}
-        </div>
+        <div class="chart-box"><canvas id="expenseMixChart"></canvas></div>
     </div>
 </section>
 
-<section class="two-col">
+<!-- ── Recent Statements ──────────────────────────────────────── -->
+<section style="margin-top:16px;">
     <div class="panel">
         <div class="panel-head">
-            <h2 class="panel-title">Recent Statements</h2>
+            <h2 class="panel-title"><i class="fas fa-folder-open"></i> Recent Statements</h2>
             <a class="link-btn" href="{% url 'statements' %}">Manage library</a>
         </div>
         <div class="table-wrap">
@@ -159,18 +382,21 @@
                     <tr>
                         <th>File</th>
                         <th>Period</th>
-                        <th style="text-align:right;">Balance</th>
+                        <th style="text-align:right;">Closing Balance</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in statement_rows|slice:":6" %}
-                    <tr>
-                        <td><a href="{% url 'statement_detail' row.id %}" class="link-btn">{{ row.file_name }}</a></td>
-                        <td class="muted">{{ row.period }}</td>
+                    <tr {% if row.in_selection %}style="background:rgba(26,77,62,.03);"{% endif %}>
+                        <td>
+                            {% if row.in_selection %}<span class="in-sel-dot" title="In current view"></span>{% endif %}
+                            <a href="{% url 'statement_detail' row.id %}" class="link-btn">{{ row.file_name }}</a>
+                        </td>
+                        <td class="muted mono">{{ row.period }}</td>
                         <td class="mono" style="text-align:right;">KES {{ row.closing_balance|floatformat:2 }}</td>
                         <td>
-                            <span class="tag {% if row.status == 'Processed' %}success{% else %}danger{% endif %}">{{ row.status }}</span>
+                            <span class="tag {% if row.status == 'Processed' %}success{% else %}warning{% endif %}">{{ row.status }}</span>
                         </td>
                     </tr>
                     {% empty %}
@@ -180,22 +406,13 @@
             </table>
         </div>
     </div>
-    <div class="panel">
-        <div class="panel-head">
-            <h2 class="panel-title">Expense Mix</h2>
-            <span class="panel-note">Latest processed statement</span>
-        </div>
-        <div class="chart-box">
-            <canvas id="expenseMixChart"></canvas>
-        </div>
-    </div>
 </section>
 
 {% else %}
 <section class="empty-state">
     <div class="empty-state-icon"><i class="fas fa-cloud-arrow-up"></i></div>
     <h3>No statements yet</h3>
-    <p>Import a PDF or CSV bank statement to get started. Once processed, this overview will show portfolio KPIs, revenue vs expense charts, alerts, and recent activity.</p>
+    <p>Import a PDF or CSV bank statement to get started. Once processed, this overview will show KPIs, health score, charts, and recent activity.</p>
     <div style="margin-top:28px;">
         <button class="primary-btn" type="button" id="openUploadModal">
             <i class="fas fa-plus"></i> Import First Statement
@@ -207,29 +424,62 @@
 
 {% block extra_scripts %}
 {% if total_statements %}
+<!-- Dial animation -->
+<script>
+(function() {
+    const arc = document.getElementById('dialArc');
+    if (!arc) return;
+    const score = {{ health_score }};
+    const circumference = 251.2;
+    // Offset: full circle = 251.2 (score 0), zero offset = 251.2 (score 100)
+    const offset = circumference - (score / 100) * circumference;
+    // Animate after a short delay
+    setTimeout(() => { arc.style.strokeDashoffset = offset; }, 120);
+})();
+</script>
+
+{{ overview_chart_labels|json_script:"ov_labels" }}
+{{ overview_revenue_series|json_script:"ov_rev" }}
+{{ overview_expense_series|json_script:"ov_exp" }}
+{{ expense_labels|json_script:"ov_exp_labels" }}
+{{ expense_values|json_script:"ov_exp_values" }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script>
+    function gd(id, fb) {
+        const el = document.getElementById(id);
+        if (!el) return fb;
+        try { return JSON.parse(el.textContent) || fb; } catch(e) { return fb; }
+    }
+    const ovLabels    = gd('ov_labels',    []);
+    const ovRev       = gd('ov_rev',       []);
+    const ovExp       = gd('ov_exp',       []);
+    const expLabels   = gd('ov_exp_labels',[]);
+    const expValues   = gd('ov_exp_values',[]);
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const C_MUTED   = rootStyle.getPropertyValue('--muted').trim() || '#6B6B6B';
+    const C_GRID    = rootStyle.getPropertyValue('--chart-grid').trim() || '#E8E8E8';
     const chartDefaults = {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#6C7A72', font: { family: 'Inter', size: 12 } } } },
+        plugins: { legend: { labels: { color: C_MUTED, font: { family: 'Inter', size: 12 } } } },
     };
 
     new Chart(document.getElementById('cashPositionChart'), {
         type: 'bar',
         data: {
-            labels: {{ overview_chart_labels_json|safe }},
+            labels: ovLabels,
             datasets: [
                 {
                     label: 'Revenue (KES)',
-                    data: {{ overview_revenue_series_json|safe }},
+                    data: ovRev,
                     backgroundColor: 'rgba(44,122,92,.85)',
                     borderRadius: 8,
                     borderSkipped: false,
                 },
                 {
                     label: 'Expenses (KES)',
-                    data: {{ overview_expense_series_json|safe }},
+                    data: ovExp,
                     backgroundColor: 'rgba(217,119,6,.7)',
                     borderRadius: 8,
                     borderSkipped: false,
@@ -239,8 +489,8 @@
         options: {
             ...chartDefaults,
             scales: {
-                x: { ticks: { color: '#6C7A72' }, grid: { display: false } },
-                y: { ticks: { color: '#6C7A72', callback: v => v >= 1000 ? 'KES ' + (v/1000).toFixed(0) + 'k' : 'KES ' + v.toLocaleString() }, grid: { color: '#ECF2EC' } }
+                x: { ticks: { color: C_MUTED }, grid: { display: false } },
+                y: { ticks: { color: C_MUTED, callback: v => v >= 1000 ? 'KES ' + (v/1000).toFixed(0) + 'k' : 'KES ' + v.toLocaleString() }, grid: { color: C_GRID } }
             }
         }
     });
@@ -248,9 +498,9 @@
     new Chart(document.getElementById('expenseMixChart'), {
         type: 'doughnut',
         data: {
-            labels: {{ expense_labels_json|safe }},
+            labels: expLabels,
             datasets: [{
-                data: {{ expense_values_json|safe }},
+                data: expValues,
                 backgroundColor: ['#1A4D3E','#2C7A5C','#5E907A','#8DB39F','#B3D0BE','#D97706','#F59E0B','#FCD34D','#6B7280','#D1D9D1'],
                 borderWidth: 0,
                 hoverOffset: 6,
@@ -258,10 +508,44 @@
         },
         options: {
             ...chartDefaults,
-            plugins: { legend: { labels: { color: '#6C7A72' }, position: 'bottom' } },
+            plugins: { legend: { labels: { color: C_MUTED }, position: 'bottom' } },
             cutout: '66%',
         }
     });
+</script>
+
+<!-- Scope bar interactivity -->
+<script>
+(function () {
+    const form        = document.getElementById('scopeForm');
+    const rangeInputs = document.getElementById('rangeInputs');
+    const stmtInputs  = document.getElementById('stmtInputs');
+    const stmtSelect  = document.getElementById('stmtSelect');
+
+    document.querySelectorAll('input[name="filter_mode"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            // Update pill highlight
+            document.querySelectorAll('.scope-pill').forEach(p => p.classList.remove('is-active'));
+            this.closest('.scope-pill').classList.add('is-active');
+
+            const mode = this.value;
+            rangeInputs.style.display = (mode === 'range')     ? 'flex' : 'none';
+            stmtInputs.style.display  = (mode === 'statement') ? 'flex' : 'none';
+
+            // Auto-submit for modes that don't need extra input
+            if (mode !== 'range' && mode !== 'statement') {
+                form.submit();
+            }
+        });
+    });
+
+    // Auto-submit when a statement is chosen from the dropdown
+    if (stmtSelect) {
+        stmtSelect.addEventListener('change', function () {
+            if (this.value) form.submit();
+        });
+    }
+})();
 </script>
 {% endif %}
 {% endblock %}

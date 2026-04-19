@@ -9,3 +9,12 @@ PyMuPDF>=1.23.0
 Pillow>=10.0.0
 markdown>=3.5.0
 xhtml2pdf>=0.2.11
+# Background task queue (Django-native alternative to Celery+Redis)
+django-q2>=1.6.0
+# Excel export
+openpyxl>=3.1.0
+# TOTP two-factor authentication
+pyotp>=2.9.0
+qrcode>=7.4.2
+# Server-side chart generation for PDF reports
+matplotlib>=3.7.0

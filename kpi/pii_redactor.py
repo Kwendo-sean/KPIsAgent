@@ -6,52 +6,52 @@ before it is sent to any external AI API (Claude / Anthropic).
 
 What is redacted
 ────────────────
-  • Bank account numbers  (8–16 consecutive digits, or common delimited formats)
-  • Card / PAN numbers    (13–19 digits, Luhn-ish patterns)
-  • IBAN numbers
+  • Bank account numbers  (8–16 consecutive digits, labelled explicitly)
+  • Card / PAN numbers    (13–19 digits with clear card grouping)
+  • IBAN numbers          (standard 2-letter country + 2 check digits + up to 30 chars)
   • Phone numbers         (Kenyan +254 / 07xx / 01xx and international E.164)
-  • National ID numbers   (Kenyan 8-digit)
   • Full names on "Account Holder:" / "Name:" header lines
 
 What is kept
 ────────────
+  • Transaction amounts and balances (e.g. 5,000.00 — NOT treated as IDs)
   • KRA PINs (AxxxxxxxxB) — needed for VAT/tax KPI analysis
-  • Transaction dates, descriptions, and amounts
-  • Currency codes and balances
+  • M-PESA receipt codes (UDEPE0P493) — alphanumeric, needed for extraction
+  • Transaction dates, descriptions, and currency codes
 
-The redaction is one-way: the original text is never stored after processing
-and the redacted copy is what gets forwarded to Claude.
+Design note on the national_id pattern
+───────────────────────────────────────
+The original pattern (?<!\d)\d{8}(?!\d) was too broad: it matched transaction
+amounts, reference codes, and M-PESA paybill numbers, mangling the text that
+Claude needs to extract transactions from.  We now only redact 8-digit numbers
+that are preceded by a PII-label keyword (e.g. "ID:" or "National ID").
 """
 
 import re
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Redaction patterns
-# ──────────────────────────────────────────────────────────────────────────────
-
 _PATTERNS: list[tuple[str, re.Pattern, str]] = [
 
-    # Card / PAN  (13–19 digits, optionally grouped with spaces/hyphens)
+    # Card / PAN: 13–19 digits grouped with spaces or hyphens (card format only)
     (
         "card_number",
         re.compile(
-            r"\b(?:\d[ -]?){13,19}\b",
-            re.IGNORECASE,
+            r"\b\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-]\d{1,7}\b",
         ),
         "[CARD-REDACTED]",
     ),
 
-    # IBAN  (2 letters + 2 digits + up to 30 alphanumeric chars)
+    # IBAN: 2-letter country code + 2 check digits + 10–30 alphanumeric chars
+    # Anchored tightly to avoid matching M-PESA receipt codes or KRA PINs.
     (
         "iban",
         re.compile(
-            r"\b[A-Z]{2}\d{2}[A-Z0-9]{1,30}\b",
+            r"\b(?:KE|UG|TZ|GB|DE|FR|NL|ZA|NG|GH|RW|ET|MZ|SD|SN|CM|CI|BF|ML|SL|GM|GN|LR|BJ|TG|NE|CF|TD|MR|MG|MW|ZM|ZW|BI|DJ|ER|SO|SS|KM|CV|ST|SZ|LS|BW|NA|AO|CD|CG|GA|GQ|RW|UG|KE|ET|SD|ER|DJ|SO|KM|SC|MU|MZ|ZW|ZM|MW|TZ|BI|RW|UG|KE)\d{2}[A-Z0-9]{10,30}\b",
             re.IGNORECASE,
         ),
         "[IBAN-REDACTED]",
     ),
 
-    # Kenyan phone numbers  (+2547xx, 07xx, 01xx, 2547xx)
+    # Kenyan phone numbers: +254..., 07..., 01..., 2547...
     (
         "phone_ke",
         re.compile(
@@ -60,7 +60,7 @@ _PATTERNS: list[tuple[str, re.Pattern, str]] = [
         "[PHONE-REDACTED]",
     ),
 
-    # Generic international phone  (+XX followed by 7–12 digits)
+    # Generic international phone: +XX or +XXX followed by 7–12 digits
     (
         "phone_intl",
         re.compile(
@@ -69,17 +69,17 @@ _PATTERNS: list[tuple[str, re.Pattern, str]] = [
         "[PHONE-REDACTED]",
     ),
 
-    # Kenyan National ID  (standalone 8-digit number)
+    # National ID — only when explicitly labelled (avoids matching amounts/codes)
     (
-        "national_id",
+        "national_id_labelled",
         re.compile(
-            r"(?<!\d)\d{8}(?!\d)",
+            r"(?:national\s*id|id\s*(?:no|number|#|num)|id\s*card)[.:\s]+\d{6,10}",
+            re.IGNORECASE,
         ),
         "[ID-REDACTED]",
     ),
 
-    # Bank account numbers:
-    # (a) explicit label  "Account No: 1234567890"
+    # Bank account numbers — only when explicitly labelled
     (
         "account_labelled",
         re.compile(
@@ -89,17 +89,7 @@ _PATTERNS: list[tuple[str, re.Pattern, str]] = [
         "[ACCOUNT-REDACTED]",
     ),
 
-    # (b) standalone 10–16 digit numbers not already matched above
-    #     (KRA PINs are excluded by their letter-digit-letter structure)
-    (
-        "account_standalone",
-        re.compile(
-            r"(?<!\d)(?<![A-Z])\d{10,16}(?!\d)(?![A-Z])",
-        ),
-        "[ACCOUNT-REDACTED]",
-    ),
-
-    # Account holder name lines  ("Account Name: John Doe" / "Name: ...")
+    # Account holder name lines
     (
         "name_label",
         re.compile(
@@ -109,7 +99,7 @@ _PATTERNS: list[tuple[str, re.Pattern, str]] = [
         "[NAME-REDACTED]",
     ),
 
-    # Statement address lines  ("Address: ..." / "P.O. Box ...")
+    # Address lines
     (
         "address",
         re.compile(
@@ -122,27 +112,17 @@ _PATTERNS: list[tuple[str, re.Pattern, str]] = [
 
 
 def redact(text: str) -> str:
-    """
-    Return a copy of *text* with all matched PII replaced by safe placeholders.
-
-    Patterns are applied in order.  Because card numbers (long digit strings)
-    are matched first, subsequent shorter-digit patterns won't double-match.
-    """
+    """Return a copy of text with all matched PII replaced by safe placeholders."""
     if not text:
         return text
-
     redacted = text
     for _name, pattern, replacement in _PATTERNS:
         redacted = pattern.sub(replacement, redacted)
-
     return redacted
 
 
 def redact_summary(original: str, redacted: str) -> dict:
-    """
-    Return a dict describing how many substitutions were made per category.
-    Useful for logging / debugging without exposing the actual values.
-    """
+    """Return a dict describing how many substitutions were made per category."""
     summary = {}
     for name, pattern, _ in _PATTERNS:
         original_matches = len(pattern.findall(original))

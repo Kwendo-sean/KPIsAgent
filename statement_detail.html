@@ -134,11 +134,91 @@
         margin-bottom: 14px;
     }
     .analysis-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
-    .analysis-card pre { white-space: pre-wrap; word-break: break-word; margin: 10px 0 0; font: inherit; line-height: 1.6; color: var(--text); }
+    .analysis-body { margin-top: 10px; line-height: 1.7; color: var(--text); }
+    .analysis-body h3 { font-size: 1rem; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+    .analysis-body p  { margin: 6px 0; color: var(--muted); }
+    .analysis-body ul { padding-left: 20px; margin: 6px 0; }
+    .analysis-body li { margin: 4px 0; color: var(--muted); }
+
+    /* ── Mini health banner + recurring callout ─────────────────── */
+    .mini-health {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--h-color, var(--accent));
+        border-radius: 12px;
+        padding: 14px 20px;
+        margin-bottom: 20px;
+    }
+    .mini-score {
+        font-size: 2rem;
+        font-weight: 800;
+        font-family: var(--font-mono);
+        color: var(--h-color, var(--accent));
+        line-height: 1;
+    }
+    .mini-label { font-size: .72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+    .mini-tier  { font-size: .88rem; font-weight: 700; }
+    .recurring-callout {
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-left: 4px solid #6366F1;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        font-size: .88rem;
+    }
+    .recurring-callout strong { color: #6366F1; }
 </style>
 {% endblock %}
 
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'export_transactions_csv' statement.id %}" class="ghost-btn"><i class="fas fa-file-csv"></i> CSV</a>
+    <a href="{% url 'export_transactions_xlsx' statement.id %}" class="ghost-btn"><i class="fas fa-file-excel"></i> Excel</a>
+    <a href="{% url 'export_kpis_csv' statement.id %}" class="ghost-btn"><i class="fas fa-table"></i> KPIs</a>
+    {% if statement.is_processed %}
+    <a href="{% url 'reprocess_statement' statement.id %}" class="ghost-btn" onclick="return confirm('Re-run AI extraction on this statement?')"><i class="fas fa-rotate"></i> Reprocess</a>
+    {% endif %}
+    <a href="{% url 'delete_statement' statement.id %}" class="danger-btn" onclick="return confirm('Delete this statement and all its data?')"><i class="fas fa-trash"></i> Delete</a>
+</div>
+{% endblock %}
+
 {% block content %}
+
+<!-- ── Health Score mini-banner ───────────────────────────────── -->
+{% if statement.is_processed %}
+{% with h_color=health_tone %}
+<div class="mini-health" style="--h-color: {% if health_tone == 'green' %}#16A34A{% elif health_tone == 'amber' %}#D97706{% elif health_tone == 'orange' %}#EA580C{% elif health_tone == 'red' %}#DC2626{% else %}#7F1D1D{% endif %};">
+    <div>
+        <div class="mini-label">Health Score</div>
+        <div class="mini-score">{{ health_score }}</div>
+    </div>
+    <div style="width: 1px; height: 40px; background: var(--border);"></div>
+    <div>
+        <div class="mini-label">Risk Tier</div>
+        <div class="mini-tier" style="color: {% if health_tone == 'green' %}#16A34A{% elif health_tone == 'amber' %}#D97706{% elif health_tone == 'orange' %}#EA580C{% elif health_tone == 'red' %}#DC2626{% else %}#7F1D1D{% endif %};">
+            <i class="fas {% if health_tone == 'green' %}fa-shield-check{% elif health_tone == 'amber' %}fa-eye{% elif health_tone == 'orange' %}fa-triangle-exclamation{% else %}fa-circle-exclamation{% endif %}"></i>
+            {{ health_tier }}
+        </div>
+    </div>
+    <div style="flex:1; font-size: .82rem; color: var(--muted); line-height: 1.5; margin-left: 8px;">
+        Composite score from profit margin, cash runway, expense ratio, deposit consistency, and anomaly count.
+    </div>
+</div>
+{% endwith %}
+{% endif %}
+
+<!-- ── Recurring Payments callout ───────────────────────────────── -->
+{% if recurring_insight %}
+<div class="recurring-callout">
+    <strong><i class="fas fa-repeat"></i> {{ recurring_insight.title }}</strong>
+    <div style="margin-top: 6px; white-space: pre-line; color: var(--text-secondary);">{{ recurring_insight.content }}</div>
+</div>
+{% endif %}
+
 <!-- ── Summary strip ─────────────────────────────────────── -->
 <div class="summary-strip">
     <div class="info-tile">
@@ -277,7 +357,7 @@
 <div class="panel">
     <div class="tab-bar">
         <button class="tab-btn is-active" type="button" data-tab="transactions">
-            <i class="fas fa-list"></i> Transactions ({{ transactions|length }})
+            <i class="fas fa-list"></i> Transactions ({{ tx_total }})
         </button>
         <button class="tab-btn" type="button" data-tab="analyses">
             <i class="fas fa-sparkles"></i> AI Analyses ({{ analyses|length }})
@@ -286,6 +366,23 @@
 
     <!-- Transactions tab -->
     <div class="tab-pane is-active" id="tab-transactions">
+        <!-- Search / Filter bar -->
+        <form method="get" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
+            <input type="text" name="q" value="{{ search_q }}" placeholder="Search description or category…"
+                style="flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--border);border-radius:99px;font:inherit;font-size:.88rem;background:var(--surface);color:var(--text);outline:none;">
+            <select name="tx_type"
+                style="padding:9px 14px;border:1px solid var(--border);border-radius:99px;font:inherit;font-size:.88rem;background:var(--surface);color:var(--text);outline:none;">
+                <option value="" {% if not tx_type_filter %}selected{% endif %}>All Types</option>
+                <option value="DEPOSIT"    {% if tx_type_filter == 'DEPOSIT' %}selected{% endif %}>Deposits</option>
+                <option value="WITHDRAWAL" {% if tx_type_filter == 'WITHDRAWAL' %}selected{% endif %}>Withdrawals</option>
+                <option value="TRANSFER"   {% if tx_type_filter == 'TRANSFER' %}selected{% endif %}>Transfers</option>
+            </select>
+            <button class="primary-btn" type="submit" style="padding:9px 20px;"><i class="fas fa-magnifying-glass"></i> Filter</button>
+            {% if search_q or tx_type_filter %}
+            <a href="?" class="ghost-btn" style="padding:9px 18px;">Clear</a>
+            {% endif %}
+        </form>
+
         <div class="table-wrap">
             <table>
                 <thead>
@@ -302,7 +399,10 @@
                     <tr>
                         <td class="muted">{{ tx.transaction_date }}</td>
                         <td>{{ tx.description }}</td>
-                        <td class="muted">{{ tx.category|default:"—" }}</td>
+                        <td class="muted cat-cell" data-tx-id="{{ tx.id }}">
+                            <span class="cat-display" title="Click to edit">{{ tx.category|default:"—" }}</span>
+                            <input class="cat-input" type="text" value="{{ tx.category|default:'' }}" style="display:none; padding:2px 6px; border:1px solid var(--accent); border-radius:4px; font-size:.85rem; width:120px; background:var(--surface); color:var(--text);">
+                        </td>
                         <td>
                             <span class="tag {% if tx.transaction_type == 'DEPOSIT' %}tx-deposit{% elif tx.transaction_type == 'WITHDRAWAL' %}tx-withdrawal{% else %}tx-transfer{% endif %}">
                                 {{ tx.transaction_type }}
@@ -311,11 +411,29 @@
                         <td class="mono" style="text-align:right;">{{ currency_symbol }} {{ tx.amount|floatformat:2 }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="muted" style="text-align:center; padding:32px;">No transactions extracted from this statement.</td></tr>
+                    <tr><td colspan="5" class="muted" style="text-align:center; padding:32px;">No transactions found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% if tx_page_obj.paginator.num_pages > 1 %}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
+            <span style="font-size:.82rem;color:var(--muted);">
+                Page {{ tx_page_obj.number }} of {{ tx_page_obj.paginator.num_pages }}
+                &nbsp;·&nbsp; {{ tx_total }} transaction{{ tx_total|pluralize }}
+            </span>
+            <div style="display:flex;gap:6px;">
+                {% if tx_page_obj.has_previous %}
+                <a href="?q={{ search_q }}&tx_type={{ tx_type_filter }}&tx_page={{ tx_page_obj.previous_page_number }}" class="ghost-btn" style="padding:7px 14px;font-size:.82rem;"><i class="fas fa-chevron-left"></i> Prev</a>
+                {% endif %}
+                {% if tx_page_obj.has_next %}
+                <a href="?q={{ search_q }}&tx_type={{ tx_type_filter }}&tx_page={{ tx_page_obj.next_page_number }}" class="ghost-btn" style="padding:7px 14px;font-size:.82rem;">Next <i class="fas fa-chevron-right"></i></a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Analyses tab -->
@@ -326,7 +444,7 @@
                 {{ analysis.analysis_type }}
             </span>
             <p><strong>{{ analysis.title }}</strong></p>
-            <pre>{{ analysis.content }}</pre>
+            <div class="analysis-body">{{ analysis.content|safe }}</div>
         </div>
         {% empty %}
         <p class="muted" style="padding:20px 0;">No AI analyses saved for this statement yet.</p>
@@ -344,6 +462,43 @@
             btn.classList.add('is-active');
             document.getElementById(`tab-${btn.dataset.tab}`).classList.add('is-active');
         });
+    });
+
+    // ── Inline category editing ─────────────────────────────────
+    const csrf = (document.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '';
+
+    document.querySelectorAll('.cat-cell').forEach(cell => {
+        const display = cell.querySelector('.cat-display');
+        const input   = cell.querySelector('.cat-input');
+        const txId    = cell.dataset.txId;
+
+        display.style.cursor = 'pointer';
+        display.addEventListener('click', () => {
+            display.style.display = 'none';
+            input.style.display   = 'inline-block';
+            input.focus();
+            input.select();
+        });
+
+        async function saveCategory() {
+            const newVal = input.value.trim();
+            try {
+                const res = await fetch(`/api/transaction/${txId}/category/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ category: newVal }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    display.textContent = data.category || '—';
+                }
+            } catch (_) {}
+            input.style.display   = 'none';
+            display.style.display = 'inline';
+        }
+
+        input.addEventListener('blur',   saveCategory);
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } if (e.key === 'Escape') { input.style.display = 'none'; display.style.display = 'inline'; } });
     });
 </script>
 {% endblock %}

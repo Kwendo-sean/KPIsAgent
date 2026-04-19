@@ -1,0 +1,216 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Budget Targets | KPIConsole{% endblock %}
+{% block eyebrow %}Planning{% endblock %}
+{% block page_title %}Budget <em>Targets</em>{% endblock %}
+{% block subtitle %}Set monthly revenue, expense, and profitability targets and track performance against actuals.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .target-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .target-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 20px;
+    }
+    .target-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .target-label { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--subtle); }
+    .target-value { font-size: 1.5rem; font-weight: 700; color: var(--ink); font-family: "JetBrains Mono", monospace; }
+    .target-actual { font-family: "JetBrains Mono", monospace; font-size: .78rem; color: var(--muted); margin-top: 4px; letter-spacing: .04em; }
+    .progress-bar { height: 5px; background: var(--line); border-radius: 3px; margin-top: 12px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+    .fill-green { background: var(--green); }
+    .fill-amber { background: var(--amber); }
+    .fill-red   { background: var(--bad); }
+
+    .new-target-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+    @media (max-width: 900px) { .new-target-form { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 580px) { .new-target-form { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Current month actuals vs targets — rendered server-side via context -->
+<section class="target-grid" id="currentMonthCards">
+    {% for card in current_month_cards %}
+    <div class="target-card">
+        <div class="target-card-head">
+            <span class="target-label">{{ card.label }}</span>
+            {% if card.has_target %}
+            <span class="tag success">Target set</span>
+            {% else %}
+            <span class="tag neutral">No target</span>
+            {% endif %}
+        </div>
+        {% if card.has_target %}
+        <div class="target-value">{{ card.target_display }}</div>
+        {% if card.actual_display %}
+        <div class="target-actual">Actual: {{ card.actual_display }}</div>
+        {% endif %}
+        {% else %}
+        <div class="target-value" style="color: var(--muted);">—</div>
+        {% endif %}
+    </div>
+    {% empty %}
+    {% for code, label in metric_choices %}
+    <div class="target-card">
+        <div class="target-card-head">
+            <span class="target-label">{{ label }}</span>
+            <span class="tag neutral">No target</span>
+        </div>
+        <div class="target-value" style="color: var(--muted);">—</div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+</section>
+
+<!-- Set a new target -->
+<div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-head">
+        <h2 class="panel-title"><i class="fas fa-bullseye"></i> Set Target</h2>
+    </div>
+    <div class="new-target-form" id="targetForm">
+        <div>
+            <label class="filter-label" for="tf_metric">Metric</label>
+            <select id="tf_metric" class="filter-input" style="width:100%; margin-top:4px;">
+                {% for code, label in metric_choices %}
+                <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="filter-label" for="tf_value">Target Value</label>
+            <input id="tf_value" type="number" step="0.01" min="0" class="filter-input" placeholder="e.g. 500000" style="width:100%; margin-top:4px;">
+        </div>
+        <div>
+            <label class="filter-label" for="tf_month">Month</label>
+            <select id="tf_month" class="filter-input" style="width:100%; margin-top:4px;">
+                {% for m in "123456789101112"|make_list %}{% endfor %}
+                <option value="1">January</option><option value="2">February</option>
+                <option value="3">March</option><option value="4">April</option>
+                <option value="5">May</option><option value="6">June</option>
+                <option value="7">July</option><option value="8">August</option>
+                <option value="9">September</option><option value="10">October</option>
+                <option value="11">November</option><option value="12">December</option>
+            </select>
+        </div>
+        <div>
+            <label class="filter-label" for="tf_year">Year</label>
+            <input id="tf_year" type="number" min="2020" max="2035" value="{{ today.year }}" class="filter-input" style="width:100%; margin-top:4px;">
+        </div>
+        <div>
+            <button type="button" id="saveBudgetBtn" class="primary-btn" style="margin-top:0; height:40px;">
+                <i class="fas fa-floppy-disk"></i> Save
+            </button>
+        </div>
+    </div>
+    <div id="budgetMsg" style="margin-top: 12px; font-size: .9rem; display: none;"></div>
+</div>
+
+<!-- Existing targets table -->
+<div class="panel">
+    <div class="panel-head">
+        <h2 class="panel-title"><i class="fas fa-table-list"></i> All Targets</h2>
+        <span class="panel-note">{{ targets.count }} target{{ targets.count|pluralize }}</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Metric</th>
+                    <th scope="col">Month / Year</th>
+                    <th scope="col" style="text-align:right;">Target</th>
+                    <th scope="col">Notes</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody id="targetsTableBody">
+                {% for t in targets %}
+                <tr data-id="{{ t.id }}">
+                    <td><span class="tag info">{{ t.get_metric_display }}</span></td>
+                    <td class="muted">{{ t.period_month }}/{{ t.period_year }}</td>
+                    <td class="mono" style="text-align:right;">
+                        {% if t.metric == "PROFIT_MARGIN" %}{{ t.target_value|floatformat:2 }}%
+                        {% else %}{{ t.currency }} {{ t.target_value|floatformat:2 }}{% endif %}
+                    </td>
+                    <td class="muted" style="max-width: 200px;">{{ t.notes|default:"—"|truncatechars:60 }}</td>
+                    <td>
+                        <button class="danger-btn del-target-btn" data-id="{{ t.id }}" style="padding: 4px 10px; font-size: .8rem;" aria-label="Delete target">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="muted" style="padding: 20px; text-align: center;">No targets set yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const csrfT = csrfInput ? csrfInput.value : '';
+
+    // Pre-select current month
+    document.getElementById('tf_month').value = {{ today.month }};
+
+    document.getElementById('saveBudgetBtn').addEventListener('click', async () => {
+        const metric  = document.getElementById('tf_metric').value;
+        const value   = parseFloat(document.getElementById('tf_value').value);
+        const month   = parseInt(document.getElementById('tf_month').value);
+        const year    = parseInt(document.getElementById('tf_year').value);
+        const msgEl   = document.getElementById('budgetMsg');
+
+        if (!value || value <= 0) {
+            msgEl.textContent = 'Enter a valid target value.';
+            msgEl.style.color = 'var(--danger)';
+            msgEl.style.display = 'block';
+            return;
+        }
+
+        const res = await fetch('{% url "save_budget_target" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfT },
+            body: JSON.stringify({ metric, target_value: value, month, year }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            msgEl.textContent = data.created ? 'Target saved!' : 'Target updated!';
+            msgEl.style.color = 'var(--good)';
+            msgEl.style.display = 'block';
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            msgEl.textContent = data.error || 'Error saving target.';
+            msgEl.style.color = 'var(--danger)';
+            msgEl.style.display = 'block';
+        }
+    });
+
+    document.querySelectorAll('.del-target-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Delete this target?')) return;
+            const id = btn.dataset.id;
+            const res = await fetch(`/api/budget/${id}/delete/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfT },
+            });
+            if ((await res.json()).success) {
+                btn.closest('tr').remove();
+            }
+        });
+    });
+</script>
+{% endblock %}

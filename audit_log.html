@@ -1,0 +1,74 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Audit Log | KPIConsole{% endblock %}
+{% block eyebrow %}Security{% endblock %}
+{% block page_title %}Audit <em>Log</em>{% endblock %}
+{% block subtitle %}A full record of uploads, exports, logins, and AI queries on your account.{% endblock %}
+
+{% block content %}
+<section class="panel" style="margin-bottom: 24px;">
+    <div class="panel-head">
+        <h2 class="panel-title"><i class="fas fa-filter"></i> Filter</h2>
+    </div>
+    <form method="get" class="filter-bar" role="search" style="flex-wrap: wrap; gap: 10px; padding-bottom: 8px;">
+        <input class="filter-input" type="text" name="q" value="{{ search_q }}" placeholder="Search details…" style="min-width: 220px;">
+        <select class="filter-input" name="action">
+            <option value="">All actions</option>
+            {% for code, label in action_choices %}
+            <option value="{{ code }}" {% if action_filter == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="primary-btn"><i class="fas fa-magnifying-glass"></i> Filter</button>
+        {% if search_q or action_filter %}
+        <a href="{% url 'audit_log' %}" class="ghost-btn"><i class="fas fa-xmark"></i> Clear</a>
+        {% endif %}
+    </form>
+</section>
+
+<div class="panel">
+    <div class="panel-head">
+        <h2 class="panel-title"><i class="fas fa-clipboard-list"></i> Activity Log</h2>
+        <span class="panel-note">{{ page_obj.paginator.count }} event{{ page_obj.paginator.count|pluralize }}</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Detail</th>
+                    <th scope="col">IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj %}
+                <tr>
+                    <td class="mono muted" style="white-space: nowrap; font-size: .85rem;">{{ log.created_at|date:"d M Y H:i:s" }}</td>
+                    <td>
+                        <span class="tag {% if log.action == 'LOGIN' %}info{% elif log.action == 'UPLOAD' %}success{% elif log.action == 'DELETE' %}danger{% elif log.action == 'EXPORT' %}warning{% else %}neutral{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td style="max-width: 400px; word-break: break-word;">{{ log.detail }}</td>
+                    <td class="mono muted" style="font-size: .85rem;">{{ log.ip_address|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="muted" style="padding: 24px; text-align: center;">No audit events found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div style="display: flex; align-items: center; gap: 8px; padding: 16px 0 4px; justify-content: center;">
+        {% if page_obj.has_previous %}
+        <a href="?q={{ search_q }}&action={{ action_filter }}&page={{ page_obj.previous_page_number }}" class="ghost-btn"><i class="fas fa-chevron-left"></i></a>
+        {% endif %}
+        <span class="muted" style="font-size: .9rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?q={{ search_q }}&action={{ action_filter }}&page={{ page_obj.next_page_number }}" class="ghost-btn"><i class="fas fa-chevron-right"></i></a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

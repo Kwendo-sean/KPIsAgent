@@ -7,98 +7,96 @@
 
 {% block extra_head %}
 <style>
-    .amount-positive { color: var(--success); }
-    .amount-negative { color: var(--danger); }
-    .tx-deposit    { background: rgba(22,163,74,.10); color: var(--success); border-color: rgba(22,163,74,.20); }
-    .tx-withdrawal { background: rgba(217,119,6,.10); color: var(--warning); border-color: rgba(217,119,6,.20); }
-    .tx-transfer   { background: rgba(0,0,0,.05);     color: var(--muted);   border-color: var(--border); }
+    .amount-positive { color: var(--good); }
+    .amount-negative { color: var(--bad); }
+    .tx-deposit    { background: var(--mint-soft);  color: var(--good);  }
+    .tx-withdrawal { background: var(--amber-soft); color: var(--amber); }
+    .tx-transfer   { background: var(--surface-alt); color: var(--muted); border: 1px solid var(--line); }
     .tx-card {
         padding: 12px 14px;
         background: var(--surface);
-        border: 1px solid var(--border-soft);
-        border-radius: 10px;
-        transition: box-shadow 140ms ease;
-        min-width: 0;
-        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        min-width: 0; overflow: hidden;
+        transition: border-color .14s;
     }
-    .tx-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .tx-card:hover { border-color: var(--line-strong); }
     .tx-card-inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 10px;
-        min-width: 0;
+        display: flex; justify-content: space-between;
+        align-items: flex-start; gap: 10px; min-width: 0;
     }
-    .tx-card-desc {
-        min-width: 0;
-        flex: 1;
-    }
+    .tx-card-desc { min-width: 0; flex: 1; }
     .tx-card-desc-text {
-        font-weight: 600;
-        font-size: .86rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-        display: block;
+        font-weight: 600; font-size: .86rem;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        max-width: 100%; display: block;
     }
     .tx-card-meta {
-        font-size: .76rem;
-        color: var(--muted);
-        margin-top: 3px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-family: "JetBrains Mono", monospace;
+        font-size: .72rem; color: var(--muted); margin-top: 3px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .tx-card-amount {
-        text-align: right;
-        flex-shrink: 0;
-    }
+    .tx-card-amount { text-align: right; flex-shrink: 0; }
     .tx-card-value {
-        font-size: .88rem;
-        font-weight: 700;
-        white-space: nowrap;
+        font-family: "JetBrains Mono", monospace;
+        font-size: .88rem; font-weight: 700; white-space: nowrap;
     }
 
     /* Pagination */
     .pagination-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 0 0;
-        border-top: 1px solid var(--border-soft);
-        margin-top: 8px;
-        gap: 12px;
-        flex-wrap: wrap;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 0 0; border-top: 1px solid var(--line);
+        margin-top: 8px; gap: 12px; flex-wrap: wrap;
     }
-    .pagination-info { font-size: .82rem; color: var(--muted); }
+    .pagination-info {
+        font-family: "JetBrains Mono", monospace;
+        font-size: .76rem; color: var(--muted);
+    }
     .pagination-links { display: flex; gap: 6px; align-items: center; }
     .page-btn {
         display: inline-flex; align-items: center; justify-content: center;
-        min-width: 34px; height: 34px; padding: 0 10px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
+        min-width: 32px; height: 32px; padding: 0 10px;
+        border: 1px solid var(--line); border-radius: 5px;
         background: var(--surface);
-        font-size: .82rem; font-weight: 600;
-        color: var(--text-secondary);
-        text-decoration: none;
-        transition: all 140ms ease;
+        font-family: "JetBrains Mono", monospace;
+        font-size: .78rem; font-weight: 600;
+        color: var(--muted); text-decoration: none;
+        transition: border-color .12s, background .12s;
     }
-    .page-btn:hover { background: var(--surface-alt); border-color: #C5C5C5; color: var(--primary); }
-    .page-btn.current { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .page-btn.disabled { opacity: .4; pointer-events: none; }
+    .page-btn:hover { background: var(--surface-alt); border-color: var(--line-strong); color: var(--ink); }
+    .page-btn.current { background: var(--green); color: #fff; border-color: var(--green); }
+    .page-btn.disabled { opacity: .35; pointer-events: none; }
 </style>
 {% endblock %}
 
 {% block page_actions %}
 <div class="page-actions">
     <button class="primary-btn" type="button" id="openUploadModal">
-        <i class="fas fa-plus"></i> Import Statement
+        <i class="fas fa-plus" aria-hidden="true"></i> Import Statement
     </button>
 </div>
 {% endblock %}
 
 {% block content %}
+<!-- Date / Status filter bar -->
+<form method="get" class="filter-bar" role="search" aria-label="Filter statements">
+    <label for="date_from">From</label>
+    <input class="filter-input" type="date" id="date_from" name="date_from" value="{{ date_from }}" aria-label="Filter from date">
+    <span class="filter-sep">—</span>
+    <label for="date_to">To</label>
+    <input class="filter-input" type="date" id="date_to" name="date_to" value="{{ date_to }}" aria-label="Filter to date">
+    <label for="status_filter" style="margin-left:8px;">Status</label>
+    <select class="filter-input" id="status_filter" name="status" aria-label="Filter by status">
+        <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+        <option value="processed" {% if status_filter == 'processed' %}selected{% endif %}>Processed</option>
+        <option value="pending"   {% if status_filter == 'pending'   %}selected{% endif %}>Pending</option>
+    </select>
+    <button class="primary-btn" type="submit" style="padding:6px 16px;"><i class="fas fa-filter" aria-hidden="true"></i> Filter</button>
+    {% if date_from or date_to or status_filter %}
+    <a href="{% url 'statements' %}" class="ghost-btn" style="padding:6px 14px;">Clear</a>
+    {% endif %}
+</form>
+
 <section class="two-col" style="margin-top: 0;">
     <!-- ── Statement table ── -->
     <div class="panel">
@@ -110,13 +108,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>File</th>
-                        <th>Uploaded</th>
-                        <th>Period</th>
-                        <th style="text-align:right;">Deposits</th>
-                        <th style="text-align:right;">Balance</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th scope="col">File</th>
+                        <th scope="col">Uploaded</th>
+                        <th scope="col">Period</th>
+                        <th scope="col" style="text-align:right;">Deposits</th>
+                        <th scope="col" style="text-align:right;">Balance</th>
+                        <th scope="col">Status</th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -144,18 +142,21 @@
                                 class="ghost-btn reprocess-statement-btn"
                                 type="button"
                                 data-statement-id="{{ row.id }}"
+                                aria-label="Reprocess {{ row.file_name }}"
                                 title="Reprocess with AI"
                                 style="padding: 6px 12px; font-size:.82rem;"
                             >
-                                <i class="fas fa-rotate"></i>
+                                <i class="fas fa-rotate" aria-hidden="true"></i>
                             </button>
                             <button
-                                class="ghost-btn delete-statement-btn"
+                                class="danger-btn delete-statement-btn"
                                 type="button"
                                 data-statement-id="{{ row.id }}"
+                                aria-label="Delete {{ row.file_name }}"
+                                title="Delete statement"
                                 style="padding: 6px 12px; font-size:.82rem;"
                             >
-                                <i class="fas fa-trash-can"></i>
+                                <i class="fas fa-trash-can" aria-hidden="true"></i>
                             </button>
                         </div>
                         </td>
@@ -323,5 +324,39 @@
     document.querySelectorAll('.reprocess-statement-btn').forEach(btn => {
         btn.addEventListener('click', () => reprocessStatement(btn.dataset.statementId));
     });
+
+    // ── Gap detection banner ────────────────────────────────────
+    (async () => {
+        try {
+            const res = await fetch('/api/gaps/', { credentials: 'same-origin' });
+            const data = await res.json();
+            if (data.gaps && data.gaps.length > 0) {
+                const banner = document.createElement('div');
+                banner.className = 'alert-card';
+                banner.style.cssText = 'margin-bottom:16px; border-left:4px solid var(--warning);';
+                banner.innerHTML = `<span class="tag warning"><i class="fas fa-triangle-exclamation"></i> Gap Detected</span>
+                <p style="margin-top:6px;"><strong>Missing statement periods:</strong> ${data.gaps.slice(0,5).join(', ')}${data.gaps.length > 5 ? ` and ${data.gaps.length - 5} more` : ''}. Upload statements to fill the gaps.</p>`;
+                const filterBar = document.querySelector('.filter-bar') || document.querySelector('.panel');
+                if (filterBar) filterBar.parentNode.insertBefore(banner, filterBar);
+            }
+        } catch (_) {}
+    })();
+
+    // ── Duplicate detection warning ────────────────────────────
+    (async () => {
+        try {
+            const res = await fetch('/api/duplicates/', { credentials: 'same-origin' });
+            const data = await res.json();
+            if (data.count > 0) {
+                const banner = document.createElement('div');
+                banner.className = 'alert-card';
+                banner.style.cssText = 'margin-bottom:16px; border-left:4px solid var(--danger);';
+                banner.innerHTML = `<span class="tag danger"><i class="fas fa-copy"></i> Duplicates</span>
+                <p style="margin-top:6px;"><strong>${data.count} duplicate transaction${data.count > 1 ? 's' : ''}</strong> found across statements. Review for overlapping uploads.</p>`;
+                const filterBar = document.querySelector('.filter-bar') || document.querySelector('.panel');
+                if (filterBar) filterBar.parentNode.insertBefore(banner, filterBar);
+            }
+        } catch (_) {}
+    })();
 </script>
 {% endblock %}

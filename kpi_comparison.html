@@ -17,105 +17,90 @@
 
     .analytics-stat-row {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 20px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        margin-bottom: 16px;
     }
     .a-stat {
         background: var(--surface);
-        border: 1px solid var(--border);
+        border: 1px solid var(--line);
         border-radius: var(--radius);
         padding: 18px 20px;
+        border-left: 3px solid var(--green);
     }
+    .a-stat-good    { border-left-color: var(--good); }
+    .a-stat-bad     { border-left-color: var(--bad); }
+    .a-stat-neutral { border-left-color: var(--amber); }
     .a-stat-label {
-        font-size: .72rem;
-        font-weight: 700;
-        letter-spacing: .12em;
-        text-transform: uppercase;
-        color: var(--muted);
-        margin-bottom: 8px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px; font-weight: 600;
+        letter-spacing: .12em; text-transform: uppercase;
+        color: var(--subtle); margin-bottom: 8px;
     }
     .a-stat-value {
-        font-size: 1.3rem;
-        font-weight: 700;
-        letter-spacing: -.02em;
-        color: var(--primary);
-        line-height: 1;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.25rem; font-weight: 600;
+        letter-spacing: -.02em; color: var(--ink); line-height: 1;
     }
     .a-stat-sub {
-        font-size: .78rem;
-        color: var(--muted);
-        margin-top: 6px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px; color: var(--subtle); margin-top: 6px;
+        letter-spacing: .04em;
     }
-    .a-stat-good  .a-stat-value { color: var(--success); }
-    .a-stat-bad   .a-stat-value { color: var(--accent); }
+    .a-stat-good    .a-stat-value { color: var(--good); }
+    .a-stat-bad     .a-stat-value { color: var(--bad); }
+    .a-stat-neutral .a-stat-value { color: var(--amber); }
 
-    .metric-selector {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
+    .metric-selector { display: flex; flex-wrap: wrap; gap: 6px; }
     .metric-chip {
-        padding: 6px 14px;
-        border-radius: 99px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--muted);
-        font: inherit;
-        font-size: .78rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 150ms ease;
-    }
-    .metric-chip.is-active {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-    }
-    .metric-chip:hover:not(.is-active) {
+        padding: 5px 12px;
+        border-radius: 5px;
+        border: 1px solid var(--line);
         background: var(--surface-alt);
-        border-color: var(--accent);
-        color: var(--primary);
+        color: var(--muted);
+        font: inherit; font-size: .78rem; font-weight: 500;
+        cursor: pointer; transition: border-color .12s, background .12s;
     }
+    .metric-chip.is-active { background: var(--green); color: #fff; border-color: var(--green); }
+    .metric-chip:hover:not(.is-active) { border-color: var(--line-strong); color: var(--ink); }
 
     .panel-header-flex {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
+        display: flex; justify-content: space-between;
+        align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
     }
     .chart-box-lg { height: 360px; }
     .chart-box-sm { height: 300px; }
 
     .kpi-compare-table td:not(:first-child) { text-align: right; }
-    .kpi-compare-table .num {
-        font-family: "JetBrains Mono", monospace;
-        font-size: .84rem;
-    }
+    .kpi-compare-table .num { font-family: "JetBrains Mono", monospace; font-size: .84rem; }
 
     .no-data-analytics {
-        padding: 72px 48px;
-        text-align: center;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
+        padding: 72px 48px; text-align: center;
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius);
     }
 
+    @media (max-width: 1200px) { .analytics-stat-row { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 1024px) {
         .analytics-grid { grid-template-columns: 1fr; }
         .full-row { grid-column: auto; }
         .analytics-stat-row { grid-template-columns: repeat(2, 1fr); }
     }
-    @media (max-width: 600px) {
-        .analytics-stat-row { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 600px) { .analytics-stat-row { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
 {% if statements %}
+
+<!-- Period selector -->
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px;gap:8px;flex-wrap:wrap;align-items:center;">
+    <span style="font-size:.78rem;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;">Periods shown:</span>
+    <a href="?limit=3"  class="ghost-btn" style="padding:6px 14px;font-size:.80rem;{% if current_limit == 3  %}background:var(--green);color:#fff;border-color:var(--green);{% endif %}">3</a>
+    <a href="?limit=6"  class="ghost-btn" style="padding:6px 14px;font-size:.80rem;{% if current_limit == 6  %}background:var(--green);color:#fff;border-color:var(--green);{% endif %}">6</a>
+    <a href="?limit=12" class="ghost-btn" style="padding:6px 14px;font-size:.80rem;{% if current_limit == 12 %}background:var(--green);color:#fff;border-color:var(--green);{% endif %}">12</a>
+    <a href="?limit=24" class="ghost-btn" style="padding:6px 14px;font-size:.80rem;{% if current_limit >= 24 %}background:var(--green);color:#fff;border-color:var(--green);{% endif %}">All</a>
+</div>
 
 <!-- Stat Row -->
 <div class="analytics-stat-row">
@@ -139,7 +124,27 @@
         <div class="a-stat-value" id="trendStatus" style="font-size:1rem;">—</div>
         <div class="a-stat-sub">Based on revenue slope</div>
     </div>
+    <div class="a-stat {% if anomaly_total >= 5 %}a-stat-bad{% elif anomaly_total >= 2 %}a-stat-neutral{% else %}a-stat-good{% endif %}">
+        <div class="a-stat-label">Anomalies Detected</div>
+        <div class="a-stat-value">{{ anomaly_total|default:"0" }}</div>
+        <div class="a-stat-sub">Unusual transactions (2.5σ)</div>
+    </div>
 </div>
+
+<!-- MoM Changes strip -->
+{% if mom_changes %}
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+    {% for label, pct in mom_changes.items %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;min-width:160px;flex:1;">
+        <div style="font-size:.70rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">{{ label }}</div>
+        <div style="font-size:1rem;font-weight:700;color:{% if pct >= 0 %}var(--success){% else %}var(--danger){% endif %};">
+            {% if pct >= 0 %}▲{% else %}▼{% endif %} {{ pct|floatformat:1 }}%
+        </div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:3px;">MoM change</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <div class="analytics-grid">
 
@@ -194,21 +199,42 @@
         </div>
     </div>
 
-    <!-- 5. Efficiency -->
+    <!-- 5. Operating Efficiency -->
     <div class="panel">
         <div class="panel-head">
-            <h2 class="panel-title"><i class="fas fa-bolt"></i> Operating Efficiency</h2>
-            <span class="panel-note">Revenue generated per transaction</span>
+            <h2 class="panel-title"><i class="fas fa-bolt"></i> Transaction Efficiency</h2>
+            <span class="panel-note">Average revenue per transaction</span>
         </div>
         <div class="chart-box-sm">
             <canvas id="efficiencyChart"></canvas>
         </div>
     </div>
 
+    <!-- 6. Performance Radar -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-compass"></i> Performance Radar</h2>
+            <span class="panel-note">Multi-dimensional health profile</span>
+        </div>
+        <div class="chart-box-sm">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+
 </div>
 
+<!-- Analytical Data for JS -->
+{{ chart_labels|json_script:"v_labels" }}
+{{ chart_datasets|json_script:"v_datasets" }}
+{{ projection_labels|json_script:"v_proj_labels" }}
+{{ revenue_projection|json_script:"v_rev_proj" }}
+{{ expense_projection|json_script:"v_exp_proj" }}
+{{ cumulative_profit|json_script:"v_cum_profit" }}
+{{ efficiency_data|json_script:"v_eff_data" }}
+{{ radar_data|json_script:"v_radar" }}
+
 <!-- KPI data for the table — must live OUTSIDE the <table> element -->
-{{ kpi_comparison_json|safe|json_script:"temp_kpi" }}
+{{ kpi_comparison_data|json_script:"temp_kpi" }}
 
 <!-- Full Data Matrix -->
 <div class="panel">
@@ -253,24 +279,38 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
     // ── Data ──────────────────────────────────────────────────────────
-    const chartLabels   = {{ chart_labels_json|safe }};
-    const chartDatasets = {{ chart_datasets_json|safe }};
-    const projLabels    = {{ projection_labels_json|safe }};
-    const revProj       = {{ revenue_projection_json|safe }};
-    const expProj       = {{ expense_projection_json|safe }};
-    const cumProfit     = {{ cumulative_profit_json|safe }};
-    const effData       = {{ efficiency_data_json|safe }};
+    function getJsonData(id, fallback) {
+        const el = document.getElementById(id);
+        if (!el) return fallback;
+        try {
+            return JSON.parse(el.textContent) || fallback;
+        } catch(e) {
+            return fallback;
+        }
+    }
 
-    // ── Design tokens (matching CSS vars) ────────────────────────────
-    const C_PRIMARY  = '#0D0D0D';
-    const C_ACCENT   = '#DC2626';
-    const C_SUCCESS  = '#16A34A';
-    const C_WARNING  = '#D97706';
-    const C_MUTED    = '#6B6B6B';
-    const C_BORDER   = '#E3E3E3';
-    const C_SURFACE  = '#F8F8F8';
+    const chartLabels   = getJsonData('v_labels', []);
+    const chartDatasets = getJsonData('v_datasets', []);
+    const projLabels    = getJsonData('v_proj_labels', []);
+    const revProj       = getJsonData('v_rev_proj', []);
+    const expProj       = getJsonData('v_exp_proj', []);
+    const cumProfit     = getJsonData('v_cum_profit', []);
+    const effData       = getJsonData('v_eff_data', []);
+    const radarData     = getJsonData('v_radar', { labels: [], latest: [], average: [] });
 
-    const METRIC_COLORS = [C_SUCCESS, C_ACCENT, C_PRIMARY, C_WARNING];
+    // ── Design tokens from CSS vars (theme-aware) ────────────────────
+    const rootStyle  = getComputedStyle(document.documentElement);
+    const cssVar     = (v) => rootStyle.getPropertyValue(v).trim();
+    const C_PRIMARY  = cssVar('--text') || '#111';
+    const C_ACCENT   = cssVar('--accent') || '#4F46E5';
+    const C_SUCCESS  = cssVar('--success') || '#16A34A';
+    const C_WARNING  = cssVar('--warning') || '#D97706';
+    const C_DANGER   = cssVar('--danger') || '#DC2626';
+    const C_MUTED    = cssVar('--muted') || '#6B6B6B';
+    const C_BORDER   = cssVar('--chart-grid') || '#E3E3E3';
+    const C_SURFACE  = cssVar('--surface-alt') || '#F8F8F8';
+
+    const METRIC_COLORS = [C_SUCCESS, C_DANGER, C_PRIMARY, C_WARNING];
 
     // ── Helpers ───────────────────────────────────────────────────────
     const fontBase = { family: "'Inter', system-ui, sans-serif", size: 11, weight: '500' };
@@ -389,14 +429,14 @@
                 {
                     label: 'Expenses',
                     data: expProj,
-                    borderColor: C_ACCENT,
+                    borderColor: C_DANGER,
                     backgroundColor: 'transparent',
                     tension: 0.3,
                     pointRadius: 3,
-                    pointBackgroundColor: C_ACCENT,
+                    pointBackgroundColor: C_DANGER,
                     segment: {
                         borderDash: ctx => ctx.p0DataIndex >= splitIdx ? [6, 4] : undefined,
-                        borderColor: ctx => ctx.p0DataIndex >= splitIdx ? 'rgba(220,38,38,.5)' : C_ACCENT,
+                        borderColor: ctx => ctx.p0DataIndex >= splitIdx ? 'rgba(220,38,38,.5)' : C_DANGER,
                     }
                 }
             ]
@@ -419,7 +459,7 @@
     (function buildBenchmark() {
         const metrics = [
             { label: 'Revenue',     idx: 0, color: C_SUCCESS },
-            { label: 'Expenses',    idx: 1, color: C_ACCENT  },
+            { label: 'Expenses',    idx: 1, color: C_DANGER  },
             { label: 'Net Income',  idx: 2, color: C_PRIMARY },
             { label: 'Profit Margin', idx: 3, color: C_WARNING },
         ];
@@ -517,9 +557,9 @@
                 data: effData,
                 backgroundColor: ctx => {
                     const v = effData[ctx.dataIndex] || 0;
-                    const max = Math.max(...effData.filter(Boolean));
-                    const alpha = 0.35 + 0.65 * (v / (max || 1));
-                    return `rgba(220,38,38,${alpha.toFixed(2)})`;
+                    const max = Math.max(...effData.filter(Boolean), 1);
+                    const alpha = 0.35 + 0.65 * (v / max);
+                    return `rgba(22,163,74,${alpha.toFixed(2)})`;
                 },
                 borderRadius: 6,
                 borderSkipped: false,
@@ -530,6 +570,56 @@
             plugins: {
                 ...sharedOpts.plugins,
                 legend: { display: false }
+            }
+        }
+    });
+
+    // ── 6. Performance Radar Chart ────────────────────────────────────
+    new Chart(document.getElementById('radarChart'), {
+        type: 'radar',
+        data: {
+            labels: radarData.labels,
+            datasets: [
+                {
+                    label: 'Latest Period',
+                    data: radarData.latest,
+                    borderColor: C_SUCCESS,
+                    backgroundColor: 'rgba(22,163,74,.2)',
+                    pointBackgroundColor: C_SUCCESS,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: C_SUCCESS
+                },
+                {
+                    label: 'Historical Avg',
+                    data: radarData.average,
+                    borderColor: C_MUTED,
+                    backgroundColor: 'rgba(107,107,107,.1)',
+                    pointBackgroundColor: C_MUTED,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: C_MUTED
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 10, font: fontBase, color: C_MUTED }
+                }
+            },
+            scales: {
+                r: {
+                    angleLines: { color: C_BORDER },
+                    grid: { color: C_BORDER },
+                    pointLabels: { color: C_MUTED, font: fontBase },
+                    ticks: { display: false, stepSize: 20 },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
             }
         }
     });

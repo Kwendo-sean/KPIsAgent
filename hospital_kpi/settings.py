@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "django_q",
     "kpi",
 ]
 
@@ -118,3 +119,47 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
+
+# ── django-q2 Task Queue (DB-backed, no Redis required) ───────────────────────
+Q_CLUSTER = {
+    "name": "hospital_kpi",
+    "workers": 2,
+    "timeout": 300,
+    "retry": 360,
+    "queue_limit": 50,
+    "bulk": 10,
+    "orm": "default",  # Use Django ORM as broker
+    "sync": False,     # Set True only in tests to run tasks synchronously
+}
+
+# ── Database Cache (avoids Redis while improving dashboard performance) ────────
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "cache_table",
+        "TIMEOUT": 300,  # 5 minutes
+        "OPTIONS": {"MAX_ENTRIES": 1000},
+    }
+}
+
+# ── Email (password reset + alert notifications) ──────────────────────────────
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",  # prints to console if not configured
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@hospital.com")
+
+# ── Multi-currency: base currency used in UI ──────────────────────────────────
+BASE_CURRENCY = os.environ.get("BASE_CURRENCY", "KES")
+SUPPORTED_CURRENCIES = ["KES", "USD", "EUR", "GBP", "UGX", "TZS", "ETB", "NGN", "ZAR", "GHS"]
+
+# ── PWA settings ──────────────────────────────────────────────────────────────
+PWA_APP_NAME = "KPIConsole"
+PWA_APP_DESCRIPTION = "Hospital Financial Intelligence"
+PWA_APP_THEME_COLOR = "#1A4D3E"
+PWA_APP_BACKGROUND_COLOR = "#F7F8F5"

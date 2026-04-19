@@ -1,0 +1,236 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Report Builder | KPIConsole{% endblock %}
+{% block eyebrow %}Reports{% endblock %}
+{% block page_title %}Report <em>Builder</em>{% endblock %}
+{% block subtitle %}Choose sections, statements, and date range — then generate a downloadable PDF report.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .builder-grid {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 24px;
+        align-items: start;
+    }
+    @media (max-width: 900px) { .builder-grid { grid-template-columns: 1fr; } }
+
+    .section-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .section-toggle {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        cursor: pointer;
+        transition: border-color 150ms, background 150ms;
+    }
+    .section-toggle:hover { border-color: var(--green); background: var(--mint-soft); }
+    .section-toggle.is-selected { border-color: var(--green); background: var(--mint-soft); }
+    .section-toggle input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+    .section-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .section-info { flex: 1; }
+    .section-info strong { display: block; font-weight: 600; color: var(--text); }
+    .section-info span { font-size: 0.85rem; color: var(--muted); }
+
+    .sidebar-panel { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+    .stmt-select-list {
+        max-height: 260px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+    }
+    .stmt-select-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.88rem;
+    }
+    .stmt-select-item:last-child { border-bottom: none; }
+    .stmt-select-item input { accent-color: var(--green); }
+    .stmt-select-item label { flex: 1; cursor: pointer; }
+    .stmt-select-item .stmt-meta { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+
+    .generate-btn {
+        width: 100%; padding: 13px;
+        background: var(--green); color: #fff;
+        border: none; border-radius: var(--radius);
+        font-size: .94rem; font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px; transition: background .12s;
+    }
+    .generate-btn:hover { background: var(--green-hover); }
+    .generate-btn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'generate_report_pdf' %}" id="reportForm">
+{% csrf_token %}
+
+<div class="builder-grid">
+    <!-- Sections to include -->
+    <div>
+        <div class="panel" style="margin-bottom: 24px;">
+            <div class="panel-head">
+                <h2 class="panel-title"><i class="fas fa-list-check"></i> Report Sections</h2>
+                <span class="panel-note">Toggle what to include</span>
+            </div>
+            <div class="section-list">
+                <label class="section-toggle is-selected">
+                    <input type="checkbox" name="include_kpi_scorecard" checked>
+                    <div class="section-icon"><i class="fas fa-chart-bar"></i></div>
+                    <div class="section-info">
+                        <strong>KPI Scorecard</strong>
+                        <span>All key metrics with status indicators</span>
+                    </div>
+                </label>
+                <label class="section-toggle is-selected">
+                    <input type="checkbox" name="include_rev_exp_chart" checked>
+                    <div class="section-icon"><i class="fas fa-chart-column"></i></div>
+                    <div class="section-info">
+                        <strong>Revenue vs Expenses Chart</strong>
+                        <span>Side-by-side bar chart per period</span>
+                    </div>
+                </label>
+                <label class="section-toggle is-selected">
+                    <input type="checkbox" name="include_profit_chart" checked>
+                    <div class="section-icon"><i class="fas fa-chart-area"></i></div>
+                    <div class="section-info">
+                        <strong>Cumulative Net Income</strong>
+                        <span>Area chart showing profit trend</span>
+                    </div>
+                </label>
+                <label class="section-toggle is-selected">
+                    <input type="checkbox" name="include_expense_mix" checked>
+                    <div class="section-icon"><i class="fas fa-chart-pie"></i></div>
+                    <div class="section-info">
+                        <strong>Expense Mix</strong>
+                        <span>Pie chart of expense categories</span>
+                    </div>
+                </label>
+                <label class="section-toggle">
+                    <input type="checkbox" name="include_tx_table">
+                    <div class="section-icon" style="background: var(--accent);"><i class="fas fa-table"></i></div>
+                    <div class="section-info">
+                        <strong>Transaction Table</strong>
+                        <span>Sample of recent transactions (last 3 statements)</span>
+                    </div>
+                </label>
+                <label class="section-toggle">
+                    <input type="checkbox" name="include_anomaly_report">
+                    <div class="section-icon" style="background: #D97706;"><i class="fas fa-triangle-exclamation"></i></div>
+                    <div class="section-info">
+                        <strong>Anomaly Report</strong>
+                        <span>Flagged unusual transactions per period</span>
+                    </div>
+                </label>
+                <label class="section-toggle">
+                    <input type="checkbox" name="include_projections">
+                    <div class="section-icon" style="background: #6366F1;"><i class="fas fa-chart-line"></i></div>
+                    <div class="section-info">
+                        <strong>Revenue Projections</strong>
+                        <span>2-period OLS linear trend forecast</span>
+                    </div>
+                </label>
+                <label class="section-toggle">
+                    <input type="checkbox" name="include_ai_narrative">
+                    <div class="section-icon" style="background: #0EA5E9;"><i class="fas fa-sparkles"></i></div>
+                    <div class="section-info">
+                        <strong>AI Narrative</strong>
+                        <span>Claude-generated financial commentary</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar: statement selection + date range + generate -->
+    <div class="sidebar-panel">
+        <div class="panel">
+            <div class="panel-head">
+                <h2 class="panel-title"><i class="fas fa-file-lines"></i> Statements</h2>
+                <button type="button" id="selectAll" class="link-btn">All</button>
+            </div>
+            {% if statements %}
+            <div class="stmt-select-list">
+                {% for s in statements %}
+                <div class="stmt-select-item">
+                    <input type="checkbox" name="statement_ids" value="{{ s.id }}" id="stmt_{{ s.id }}" checked>
+                    <label for="stmt_{{ s.id }}">
+                        <span>{{ s.file_name|truncatechars:30 }}</span>
+                        <span class="stmt-meta">
+                            {% if s.statement_period_start %}{{ s.statement_period_start|date:"M Y" }}{% else %}{{ s.upload_date|date:"M Y" }}{% endif %}
+                        </span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted" style="padding: 16px; font-size: .9rem;">No processed statements yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                <h2 class="panel-title"><i class="fas fa-calendar"></i> Date Range</h2>
+                <span class="panel-note">Optional filter</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 4px 0 8px;">
+                <div>
+                    <label class="filter-label" for="date_from">From</label>
+                    <input type="date" name="date_from" id="date_from" class="filter-input" style="width:100%; margin-top:4px;">
+                </div>
+                <div>
+                    <label class="filter-label" for="date_to">To</label>
+                    <input type="date" name="date_to" id="date_to" class="filter-input" style="width:100%; margin-top:4px;">
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="generate-btn" id="generateBtn" {% if not statements %}disabled{% endif %}>
+            <i class="fas fa-file-pdf"></i> Generate PDF Report
+        </button>
+
+        <p class="muted" style="font-size: .8rem; text-align: center; line-height: 1.5;">
+            Generating a large report with AI narrative may take 30–60 seconds.
+        </p>
+    </div>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Toggle selected styling on section checkboxes
+    document.querySelectorAll('.section-toggle input[type="checkbox"]').forEach(cb => {
+        const label = cb.closest('.section-toggle');
+        cb.addEventListener('change', () => {
+            label.classList.toggle('is-selected', cb.checked);
+        });
+    });
+
+    // Select all / deselect all statements
+    document.getElementById('selectAll')?.addEventListener('click', function() {
+        const cbs = document.querySelectorAll('[name="statement_ids"]');
+        const allChecked = [...cbs].every(c => c.checked);
+        cbs.forEach(c => c.checked = !allChecked);
+        this.textContent = allChecked ? 'All' : 'None';
+    });
+
+    // Show loading state on submit
+    document.getElementById('reportForm').addEventListener('submit', function() {
+        const btn = document.getElementById('generateBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    });
+</script>
+{% endblock %}

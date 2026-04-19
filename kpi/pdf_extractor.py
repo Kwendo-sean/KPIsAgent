@@ -41,6 +41,12 @@ class BankStatementPDFExtractor:
         "%d-%B-%Y",
         "%b %d, %Y",
         "%B %d, %Y",
+        # M-PESA specific formats: "Oct. 25, 2025" or "March 26, 2025"
+        "%b. %d, %Y",
+        "%B. %d, %Y",
+        # Statement header format: "16 Oct 2025"
+        "%d %b %Y",
+        "%d %B %Y",
     )
 
     @staticmethod
@@ -263,7 +269,10 @@ class BankStatementPDFExtractor:
             return mpesa_result
 
         # ── Generic fallback ──────────────────────────────────────────────────
-        dates = cls.extract_dates(cleaned)
+        transactions_for_dates = cls._parse_mpesa_detail_rows(cleaned)
+        tx_dates = sorted(tx["date"] for tx in transactions_for_dates if tx.get("date"))
+
+        dates = tx_dates if tx_dates else cls.extract_dates(cleaned)
         amounts = cls.extract_numbers(cleaned)
         if not dates and not amounts:
             return None
@@ -287,6 +296,26 @@ class BankStatementPDFExtractor:
             "total_withdrawals": total_out,
             "transactions": transactions,
         }
+
+    @classmethod
+    def parse_mpesa_transactions(cls, text: str) -> list:
+        """
+        Public method to parse M-PESA transactions using all available methods.
+        This is called as a fallback when AI extraction fails.
+        """
+        cleaned = cls.clean_pdf_text(text)
+
+        # Try detailed row parsing first (most accurate)
+        transactions = cls._parse_mpesa_detail_rows(cleaned)
+
+        # If we got transactions from detailed parsing, use them
+        if transactions:
+            return transactions
+
+        # Fallback to generic transaction parsing
+        transactions = cls._parse_transaction_rows(cleaned)
+
+        return transactions
 
     @classmethod
     def _parse_mpesa_summary(cls, text: str) -> dict | None:
@@ -350,11 +379,24 @@ class BankStatementPDFExtractor:
         if detailed:
             transactions = detailed  # prefer detail rows if available
 
-        dates = cls.extract_dates(text)
-        # Closing balance — look for pattern like "Closing Balance 234.00"
+        # Derive period from actual transaction dates (reliable) rather than raw text scan
+        tx_dates = sorted(tx["date"] for tx in transactions if tx.get("date"))
+        if tx_dates:
+            dates = [tx_dates[0], tx_dates[-1]]
+        else:
+            dates = [d for d in cls.extract_dates(text) if d]
+
+        # Closing balance — look for pattern like "Closing Balance 234.00" or just balance after "TOTAL"
         closing = 0.0
         closing_match = re.search(r"closing\s*balance\s*[:\-]?\s*([\d,]+\.?\d*)", text, re.IGNORECASE)
-        if closing_match:
+        if not closing_match:
+            # Try looking for a number that appears to be the balance near the total
+            # In some statements it's just a number after the total out.
+            after_total = text[total_match.end():total_match.end()+100]
+            bal_match = re.search(r"([\d,]+\.\d{2})", after_total)
+            if bal_match:
+                closing = _n(bal_match.group(1))
+        else:
             closing = _n(closing_match.group(1))
 
         return {
@@ -370,30 +412,126 @@ class BankStatementPDFExtractor:
     @classmethod
     def _parse_mpesa_detail_rows(cls, text: str) -> list:
         """
-        Parse individual M-PESA transaction rows:
-          DATE       TIME    DETAILS                  PAID IN   PAID OUT   BALANCE
-          16/10/2025 08:23   RECEIVED FROM JOHN       1000.00   0.00       5000.00
+        Parse individual M-PESA transaction rows.
+
+        The Safaricom M-PESA mini-statement extracts each PDF row as a long concatenated
+        string containing ONE deposit ('Completed — DEPOSIT KES X') plus MANY embedded
+        withdrawal lines, each identified by its 10-char receipt code + ISO date.
+
+        Example withdrawal embedded in description:
+          TJVPE8QU4X 2025-10-31 10:25:05 Airtime Purchase Completed -20.00 151.61
+
+        Strategy:
+          Pattern 5  - Receipt-code anchored lines (PRIMARY — most reliable for M-PESA)
+          Pattern 1  - Traditional columnar dd/mm/yyyy paid_in paid_out (fallback only)
+          Pattern 2  - Month-name grouped DEPOSIT rows (fallback only)
         """
         transactions = []
-        # Pattern: date  time(optional)  description  amount_in  amount_out  balance(optional)
-        row_re = re.compile(
-            r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"   # date
-            r"(?:\s+\d{1,2}:\d{2})?"               # optional time
-            r"\s+(.+?)\s+"                          # description
-            r"([\d,]+\.\d{2})\s+"                  # paid in
-            r"([\d,]+\.\d{2})"                      # paid out
-            r"(?:\s+([\d,]+\.\d{2}))?",             # optional balance
+
+        # ── Pattern 5 (PRIMARY): Receipt-code anchored transaction lines ─────────
+        # Uses ISO dates embedded in receipt lines (YYYY-MM-DD) — immune to PDF
+        # page-header date artifacts like "Dec. 25, 2027".
+        receipt_wd_re = re.compile(
+            r"[A-Z0-9]{10}\s+"
+            r"(\d{4}-\d{2}-\d{2})\s+"           # ISO date (authoritative)
+            r"\d{2}:\d{2}:\d{2}\s+"
+            r"(.+?)\s+"                           # description
+            r"Completed\s+"
+            r"(-[\d,]+\.\d{2})"                  # negative amount → withdrawal
+            r"\s+[\d,]+\.\d{2}",                 # running balance
             re.MULTILINE,
         )
-        for m in row_re.finditer(text):
+        receipt_dep_re = re.compile(
+            r"[A-Z0-9]{10}\s+"
+            r"(\d{4}-\d{2}-\d{2})\s+"
+            r"\d{2}:\d{2}:\d{2}\s+"
+            r"(.+?)\s+"
+            r"Completed\s+.{1,4}\s*DEPOSIT\s+KES\s*([\d,]+\.\d{2})",
+            re.IGNORECASE | re.MULTILINE,
+        )
+
+        for m in receipt_wd_re.finditer(text):
+            iso_date = m.group(1)
+            desc     = m.group(2).strip()
+            amount   = abs(float(m.group(3).replace(",", "")))
+            if amount <= 0:
+                continue
+            parsed_date = cls._parse_date(iso_date, strict=True)
+            if not parsed_date:
+                continue
+            transactions.append({"date": parsed_date.isoformat(), "description": desc, "amount": amount, "type": "WITHDRAWAL"})
+
+        for m in receipt_dep_re.finditer(text):
+            iso_date = m.group(1)
+            desc     = m.group(2).strip()
+            amount   = float(m.group(3).replace(",", ""))
+            parsed_date = cls._parse_date(iso_date, strict=True)
+            if not parsed_date:
+                continue
+            transactions.append({"date": parsed_date.isoformat(), "description": desc, "amount": amount, "type": "DEPOSIT"})
+
+        # If Pattern 5 found receipt-anchored transactions, skip the fallback patterns —
+        # Pattern 1 is known to misparse ISO timestamps (e.g. "26-04-16" from "2026-04-16")
+        # as past dates and merges multiple transactions into one description row.
+        if transactions:
+            seen = set()
+            unique = []
+            for tx in transactions:
+                key = (tx["date"], tx["description"], tx["amount"], tx["type"])
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(tx)
+            return unique
+
+        # ── Pattern 2: Month-name grouped DEPOSIT rows (fallback) ──────────────
+        row_re2 = re.compile(
+            r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+\d{1,2},?\s+\d{4})"
+            r"\s+\d{1,2}:\d{2}:\d{2}"
+            r"\s+(.+?)\s+"
+            r"(?:DEPOSIT|DEPOSIT\s+KES)\s*"
+            r"([\d,]+\.\d{2})",
+            re.IGNORECASE | re.MULTILINE,
+        )
+        for m in row_re2.finditer(text):
+            raw_date = m.group(1)
+            desc = m.group(2).strip()
+            amount = float(m.group(3).replace(",", ""))
+            parsed_date = cls._parse_date(raw_date, strict=True)
+            if not parsed_date:
+                continue
+            transactions.append({"date": parsed_date.isoformat(), "description": desc, "amount": amount, "type": "DEPOSIT"})
+
+        if transactions:
+            seen = set()
+            unique = []
+            for tx in transactions:
+                key = (tx["date"], tx["description"], tx["amount"], tx["type"])
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(tx)
+            return unique
+
+        # ── Pattern 1: Traditional columnar format (last resort fallback) ────────
+        # WARNING: This pattern can misparse ISO timestamps embedded in text as dates.
+        # Only use when no receipt-code lines were found (non-M-PESA statements).
+        row_re1 = re.compile(
+            r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})"
+            r"(?:\s+\d{1,2}:\d{2})?"
+            r"\s+(.+?)\s+"
+            r"([\d,]+\.\d{2})\s+"
+            r"([\d,]+\.\d{2})"
+            r"(?:\s+([\d,]+\.\d{2}))?",
+            re.MULTILINE,
+        )
+        for m in row_re1.finditer(text):
             raw_date = m.group(1)
             desc     = m.group(2).strip()
             paid_in  = float(m.group(3).replace(",", ""))
             paid_out = float(m.group(4).replace(",", ""))
-
-            parsed_date = cls._parse_date(raw_date)
-            date_str = parsed_date.isoformat() if parsed_date else raw_date
-
+            parsed_date = cls._parse_date(raw_date, strict=True)
+            if not parsed_date:
+                continue
+            date_str = parsed_date.isoformat()
             if paid_in > 0 and paid_out == 0:
                 transactions.append({"date": date_str, "description": desc, "amount": paid_in,  "type": "DEPOSIT"})
             elif paid_out > 0 and paid_in == 0:
@@ -401,7 +539,15 @@ class BankStatementPDFExtractor:
             elif paid_in > 0:
                 transactions.append({"date": date_str, "description": desc, "amount": paid_in,  "type": "DEPOSIT"})
 
-        return transactions
+        seen = set()
+        unique_transactions = []
+        for tx in transactions:
+            key = (tx["date"], tx["description"], tx["amount"], tx["type"])
+            if key not in seen:
+                seen.add(key)
+                unique_transactions.append(tx)
+
+        return unique_transactions
 
     @classmethod
     def _extract_totals_from_text(cls, text: str) -> tuple:
@@ -449,9 +595,10 @@ class BankStatementPDFExtractor:
     @classmethod
     def extract_dates(cls, text):
         date_patterns = [
-            r"\d{1,2}/\d{1,2}/\d{2,4}",
-            r"\d{4}-\d{1,2}-\d{1,2}",
-            r"\d{1,2}-\w{3}-\d{2,4}",
+            r"\d{1,2}/\d{1,2}/\d{2,4}",          # 16/10/2025
+            r"\d{4}-\d{1,2}-\d{1,2}",             # 2025-10-16
+            r"\d{1,2}-\w{3}-\d{2,4}",             # 16-Oct-2025
+            r"\w{3,9}\s+\d{1,2},?\s+\d{4}",       # Oct 25, 2031 or October 25, 2031
         ]
         parsed_dates = []
         for pattern in date_patterns:
@@ -473,21 +620,52 @@ class BankStatementPDFExtractor:
         return re.sub(r"[^a-z0-9]", "", (header or "").strip().lower())
 
     @classmethod
-    def _parse_date(cls, raw_value):
+    def _parse_date(cls, raw_value, strict=False):
+        """
+        Parse a date string using known formats.
+        If strict=True, rejects dates that are clearly outliers (future or distant past).
+        """
         value = (raw_value or "").strip()
         if not value:
             return None
-        value = value.replace(".", "/")
+
+        # For M-PESA statements, handle "Oct. 25, 2031" format by stripping the period
+        original_value = value
+
+        # First try with original value
         for fmt in cls.DATE_FORMATS:
             try:
                 d = datetime.strptime(value, fmt).date()
-                # Reject implausible years — anything outside 1990–2099 is a
-                # mis-parse (e.g. a receipt-ID fragment matching a 2-digit year).
                 if not (1990 <= d.year <= 2099):
                     continue
+                
+                if strict:
+                    current_year = datetime.now().year
+                    if d.year > current_year or d.year < current_year - 5:
+                        continue
+
                 return d
             except ValueError:
                 continue
+
+        # Try stripping periods from month names (e.g., "Oct." -> "Oct")
+        value_without_period = re.sub(r'\.(\s)', r'\1', original_value)
+        if value_without_period != original_value:
+            for fmt in cls.DATE_FORMATS:
+                try:
+                    d = datetime.strptime(value_without_period, fmt).date()
+                    if not (1990 <= d.year <= 2099):
+                        continue
+                    
+                    if strict:
+                        current_year = datetime.now().year
+                        if d.year > current_year or d.year < current_year - 5:
+                            continue
+                            
+                    return d
+                except ValueError:
+                    continue
+
         return None
 
     @staticmethod

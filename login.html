@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="loginHtml">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +14,7 @@
 
         :root {
             --primary:    #0D0D0D;
-            --accent:     #DC2626;
+            --accent:     #4F46E5;
             --bg:         #F2F2F2;
             --surface:    #FFFFFF;
             --border:     #E3E3E3;
@@ -22,6 +22,7 @@
             --text:       #111111;
             --error-bg:   rgba(220,38,38,.08);
             --error-fg:   #DC2626;
+            --accent-gradient: linear-gradient(135deg,#4F46E5 0%,#6366F1 100%);
         }
 
         html, body {
@@ -69,14 +70,14 @@
             position: absolute;
             top: -120px; right: -80px;
             width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(220,38,38,.18) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(79,70,229,.22) 0%, transparent 70%);
             pointer-events: none;
         }
         .brand-blob-bottom {
             position: absolute;
             bottom: -100px; left: -60px;
             width: 340px; height: 340px;
-            background: radial-gradient(circle, rgba(220,38,38,.12) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(99,102,241,.14) 0%, transparent 70%);
             pointer-events: none;
         }
 
@@ -90,11 +91,13 @@
         .brand-logo-icon {
             width: 48px; height: 48px;
             border-radius: 14px;
-            background: var(--accent);
+            background: var(--accent-gradient);
             display: flex; align-items: center; justify-content: center;
             color: #fff;
-            font-size: 1.25rem;
-            box-shadow: 0 8px 24px rgba(220,38,38,.40);
+            font-size: .80rem;
+            font-weight: 800;
+            letter-spacing: -.02em;
+            box-shadow: 0 8px 24px rgba(79,70,229,.40);
         }
         .brand-logo-name {
             font-size: 1.3rem;
@@ -173,6 +176,13 @@
             justify-content: center;
             padding: 56px 48px;
             position: relative;
+        }
+        .form-panel::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(135deg,#4F46E5 0%,#6366F1 100%);
         }
 
         .form-eyebrow {
@@ -272,7 +282,7 @@
         .btn-signin:hover {
             background: var(--accent);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(220,38,38,.30);
+            box-shadow: 0 8px 20px rgba(79,70,229,.30);
         }
         .btn-signin:active { transform: translateY(0); }
 
@@ -317,6 +327,20 @@
         @media (prefers-reduced-motion: reduce) {
             .btn-signin, input { transition: none; }
         }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #0C0C0C; --surface: #161616; --border: #2C2C2C; --muted: #717171; --text: #E8E8E8; --primary: #EFEFEF; }
+            input[type="text"], input[type="password"] { background: #1E1E1E; color: #E8E8E8; border-color: #2C2C2C; }
+            input[type="text"]:focus, input[type="password"]:focus { background: #222; }
+            .demo-box { background: #1E1E1E; }
+            code { background: #222; border-color: #2C2C2C; color: #E8E8E8; }
+        }
+        [data-theme="dark"] {
+            --bg: #0C0C0C; --surface: #161616; --border: #2C2C2C; --muted: #717171; --text: #E8E8E8; --primary: #EFEFEF;
+        }
+        [data-theme="dark"] input[type="text"],
+        [data-theme="dark"] input[type="password"] { background: #1E1E1E; color: #E8E8E8; border-color: #2C2C2C; }
+        [data-theme="dark"] .demo-box { background: #1E1E1E; }
+        [data-theme="dark"] code { background: #222; border-color: #2C2C2C; color: #E8E8E8; }
     </style>
 </head>
 <body>
@@ -325,7 +349,7 @@
         <div class="brand-panel">
             <div class="brand-blob-bottom"></div>
             <div class="brand-logo">
-                <div class="brand-logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="brand-logo-icon">KPI</div>
                 <div class="brand-logo-name">KPI<span>Console</span></div>
             </div>
 
@@ -334,22 +358,22 @@
                     <i class="fas fa-circle" style="font-size:.5rem; color:var(--accent);"></i>
                     Hospital Financial Intelligence
                 </div>
-                <h2>Your finances,<br><em>clearly</em> understood.</h2>
-                <p>Import bank statements, let AI do the heavy lifting, and get actionable KPIs in seconds.</p>
+                <h2>Financial clarity,<br><em>powered</em> by AI.</h2>
+                <p>Import bank statements, extract transactions automatically, and surface the KPIs that drive better decisions — all in one place.</p>
             </div>
 
             <div class="brand-stats">
                 <div class="brand-stat-item">
                     <div class="brand-stat-value">PDF & CSV</div>
-                    <div class="brand-stat-label">Import formats</div>
+                    <div class="brand-stat-label">Statement formats</div>
                 </div>
                 <div class="brand-stat-item">
-                    <div class="brand-stat-value">AI-powered</div>
+                    <div class="brand-stat-value">Claude AI</div>
                     <div class="brand-stat-label">Analysis engine</div>
                 </div>
                 <div class="brand-stat-item">
-                    <div class="brand-stat-value">Real-time</div>
-                    <div class="brand-stat-label">KPI tracking</div>
+                    <div class="brand-stat-value">KES</div>
+                    <div class="brand-stat-label">Optimised for Kenya</div>
                 </div>
             </div>
         </div>
@@ -400,16 +424,26 @@
                     </div>
                 </div>
 
+                <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+                    <a href="{% url 'password_reset' %}" style="font-size:.82rem;color:var(--accent);font-weight:600;text-decoration:none;" tabindex="0">Forgot password?</a>
+                </div>
+
                 <button type="submit" class="btn-signin">
                     <i class="fas fa-arrow-right-to-bracket"></i> Sign In
                 </button>
             </form>
 
-            <div class="demo-box">
-                <div class="demo-box-label">Demo credentials</div>
-                <p>Username: <code>admin</code> &nbsp;&middot;&nbsp; Password: <code>admin123</code></p>
-            </div>
+            <p style="margin-top:28px;font-size:.80rem;color:var(--muted);text-align:center;line-height:1.5;">
+                Access is restricted to authorised personnel.<br>Contact your system administrator if you need access.
+            </p>
         </div>
     </div>
+<script>
+    (function(){
+        const t=localStorage.getItem('kpi-theme');
+        const dark=t?t==='dark':window.matchMedia('(prefers-color-scheme:dark)').matches;
+        document.getElementById('loginHtml').setAttribute('data-theme',dark?'dark':'light');
+    })();
+</script>
 </body>
 </html>

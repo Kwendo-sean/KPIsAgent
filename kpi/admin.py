@@ -1,6 +1,10 @@
 from django.contrib import admin
 
-from .models import AIAnalysis, BankStatement, FinancialTransaction, KPIMetric, UserProfile
+from .models import (
+    AIAnalysis, AuditLog, BankStatement, FinancialTransaction,
+    KPIMetric, UserProfile, BudgetTarget, StatementTag, StatementTagging,
+    TwoFactorProfile,
+)
 
 
 @admin.register(BankStatement)
@@ -40,3 +44,36 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "role", "department")
     list_filter = ("role", "department")
     search_fields = ("user__username", "user__email", "department")
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ("user", "action", "detail", "ip_address", "created_at")
+    list_filter = ("action", "created_at")
+    search_fields = ("user__username", "detail", "ip_address")
+    readonly_fields = ("user", "action", "detail", "ip_address", "created_at")
+
+
+@admin.register(BudgetTarget)
+class BudgetTargetAdmin(admin.ModelAdmin):
+    list_display = ("user", "metric", "target_value", "period_month", "period_year", "currency")
+    list_filter = ("metric", "period_year", "currency")
+    search_fields = ("user__username",)
+
+
+@admin.register(StatementTag)
+class StatementTagAdmin(admin.ModelAdmin):
+    list_display = ("user", "name", "color", "created_at")
+    search_fields = ("user__username", "name")
+
+
+@admin.register(StatementTagging)
+class StatementTaggingAdmin(admin.ModelAdmin):
+    list_display = ("statement", "tag", "created_at")
+
+
+@admin.register(TwoFactorProfile)
+class TwoFactorProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "is_enabled", "created_at")
+    list_filter = ("is_enabled",)
+    readonly_fields = ("totp_secret", "backup_codes", "created_at", "updated_at")

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+    @page { size: A4; margin: 18mm 15mm 18mm 15mm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #1C1C1C; line-height: 1.5; margin: 0; }
+
+    /* Cover */
+    .cover { text-align: center; padding: 60px 20px 40px; border-bottom: 3px solid #1A4D3E; margin-bottom: 30px; }
+    .cover-logo { font-size: 28pt; font-weight: 900; color: #1A4D3E; letter-spacing: -1px; }
+    .cover-sub { font-size: 12pt; color: #6B7280; margin-top: 6px; }
+    .cover-title { font-size: 20pt; font-weight: 700; color: #1A4D3E; margin-top: 24px; }
+    .cover-meta { margin-top: 16px; font-size: 9pt; color: #6B7280; }
+
+    /* Section headers */
+    h2 { font-size: 13pt; font-weight: 700; color: #1A4D3E; border-bottom: 2px solid #E5EBE5; padding-bottom: 6px; margin-top: 28px; margin-bottom: 12px; page-break-after: avoid; }
+    h3 { font-size: 10pt; font-weight: 700; color: #2C7A5C; margin-top: 16px; margin-bottom: 6px; }
+
+    /* Summary cards */
+    .summary-row { display: table; width: 100%; border-collapse: separate; border-spacing: 8px; margin-bottom: 16px; }
+    .summary-card { display: table-cell; width: 25%; background: #F0F5F2; border-radius: 8px; padding: 12px 14px; text-align: center; }
+    .summary-card .card-label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .08em; color: #6B7280; margin-bottom: 4px; }
+    .summary-card .card-value { font-size: 14pt; font-weight: 700; color: #1A4D3E; }
+    .summary-card .card-meta { font-size: 7.5pt; color: #6B7280; margin-top: 2px; }
+
+    /* Charts */
+    .chart-img { width: 100%; max-width: 500px; display: block; margin: 0 auto 20px; page-break-inside: avoid; }
+    .chart-pair { display: table; width: 100%; border-spacing: 10px; }
+    .chart-col { display: table-cell; width: 50%; vertical-align: top; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 16px; page-break-inside: avoid; }
+    th { background: #1A4D3E; color: #fff; padding: 7px 8px; text-align: left; font-size: 8pt; }
+    td { padding: 5px 8px; border-bottom: 1px solid #E5EBE5; }
+    tr:nth-child(even) td { background: #F7FAF8; }
+    .status-healthy { color: #2C7A5C; font-weight: 700; }
+    .status-warning { color: #D97706; font-weight: 700; }
+    .status-critical { color: #DC2626; font-weight: 700; }
+    .tx-deposit { color: #2C7A5C; }
+    .tx-withdrawal { color: #DC2626; }
+
+    /* AI narrative */
+    .narrative { background: #F0F5F2; border-left: 4px solid #1A4D3E; padding: 14px 16px; border-radius: 0 8px 8px 0; font-size: 9.5pt; line-height: 1.6; margin-bottom: 20px; }
+    .narrative p { margin: 0 0 8px 0; }
+    .narrative ul, .narrative ol { padding-left: 20px; margin: 0 0 8px; }
+    .narrative li { margin-bottom: 3px; }
+
+    /* Anomaly */
+    .anomaly-item { background: #FFF7ED; border: 1px solid #FDE68A; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: 8.5pt; }
+
+    /* Footer */
+    .footer { text-align: center; font-size: 7pt; color: #9CA3AF; margin-top: 40px; border-top: 1px solid #E5EBE5; padding-top: 8px; }
+
+    .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- Cover -->
+<div class="cover">
+    <div class="cover-logo">KPIConsole</div>
+    <div class="cover-sub">Hospital Financial Intelligence</div>
+    <div class="cover-title">Financial Performance Report</div>
+    <div class="cover-meta">
+        Prepared for: {{ user.get_full_name|default:user.username }}<br>
+        Period: {{ date_range }}<br>
+        Generated: {{ generated_at }}<br>
+        Statements included: {{ statement_count }}
+    </div>
+</div>
+
+<!-- Executive Summary -->
+<h2>Executive Summary</h2>
+<div class="summary-row">
+    <div class="summary-card">
+        <div class="card-label">Total Revenue</div>
+        <div class="card-value">KES {{ total_rev|floatformat:0 }}</div>
+        <div class="card-meta">All periods</div>
+    </div>
+    <div class="summary-card">
+        <div class="card-label">Total Expenses</div>
+        <div class="card-value">KES {{ total_exp|floatformat:0 }}</div>
+        <div class="card-meta">All periods</div>
+    </div>
+    <div class="summary-card">
+        <div class="card-label">Net Income</div>
+        <div class="card-value" style="color: {% if net_income >= 0 %}#1A4D3E{% else %}#DC2626{% endif %};">
+            KES {{ net_income|floatformat:0 }}
+        </div>
+        <div class="card-meta">Revenue minus expenses</div>
+    </div>
+    <div class="summary-card">
+        <div class="card-label">Profit Margin</div>
+        <div class="card-value" style="color: {% if profit_margin >= 15 %}#1A4D3E{% elif profit_margin >= 5 %}#D97706{% else %}#DC2626{% endif %};">
+            {{ profit_margin|floatformat:1 }}%
+        </div>
+        <div class="card-meta">Net / Revenue</div>
+    </div>
+</div>
+
+<!-- AI Narrative -->
+{% if include_ai_narrative and ai_narrative_html %}
+<h2>Financial Analysis</h2>
+<div class="narrative">{{ ai_narrative_html|safe }}</div>
+{% endif %}
+
+<!-- Revenue vs Expenses Chart -->
+{% if charts.rev_exp %}
+<h2>Revenue vs Expenses</h2>
+<img class="chart-img" src="data:image/png;base64,{{ charts.rev_exp }}" alt="Revenue vs Expenses">
+{% endif %}
+
+<!-- Cumulative Profit Chart -->
+{% if charts.profit %}
+<h2>Cumulative Net Income</h2>
+<img class="chart-img" src="data:image/png;base64,{{ charts.profit }}" alt="Cumulative Net Income">
+{% endif %}
+
+<!-- Expense Mix + KPI Scorecard side-by-side -->
+{% if charts.expense_mix or charts.kpi_scorecard %}
+<div class="chart-pair">
+    {% if charts.expense_mix %}
+    <div class="chart-col">
+        <h2>Expense Mix</h2>
+        <img class="chart-img" src="data:image/png;base64,{{ charts.expense_mix }}" alt="Expense Mix">
+    </div>
+    {% endif %}
+    {% if charts.kpi_scorecard %}
+    <div class="chart-col">
+        <h2>KPI Scorecard</h2>
+        <img class="chart-img" src="data:image/png;base64,{{ charts.kpi_scorecard }}" alt="KPI Scorecard">
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- KPI Table -->
+{% if include_kpi_scorecard and kpi_rows %}
+<div class="page-break"></div>
+<h2>KPI Detail</h2>
+<table>
+    <thead>
+        <tr><th>Metric</th><th>Value</th><th>Unit</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {% for name, value, unit, status in kpi_rows %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+            <td>{{ unit }}</td>
+            <td class="status-{{ status|lower }}">{{ status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<!-- Transaction Table -->
+{% if include_tx_table and tx_sample %}
+<div class="page-break"></div>
+<h2>Recent Transactions</h2>
+<table>
+    <thead>
+        <tr><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th style="text-align:right;">Amount (KES)</th></tr>
+    </thead>
+    <tbody>
+        {% for tx in tx_sample %}
+        <tr>
+            <td>{{ tx.date }}</td>
+            <td>{{ tx.description }}</td>
+            <td class="{% if tx.type == 'DEPOSIT' %}tx-deposit{% else %}tx-withdrawal{% endif %}">{{ tx.type }}</td>
+            <td>{{ tx.category }}</td>
+            <td style="text-align:right;">{{ tx.amount|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<!-- Anomaly Report -->
+{% if include_anomaly_report %}
+<h2>Anomaly Report</h2>
+{% if anomalies %}
+    {% for a in anomalies %}
+    <div class="anomaly-item">
+        <strong>{{ a.period }}</strong> — {{ a.count }} anomalous transaction{{ a.count|pluralize }} detected in <em>{{ a.file }}</em>
+    </div>
+    {% endfor %}
+{% else %}
+    <p style="color: #2C7A5C;">No anomalies detected across the selected statements.</p>
+{% endif %}
+{% endif %}
+
+<!-- Projections Table -->
+{% if include_projections and proj_labels %}
+<h2>Revenue & Expense Projections</h2>
+<table>
+    <thead>
+        <tr><th>Period</th><th style="text-align:right;">Projected Revenue (KES)</th><th style="text-align:right;">Projected Expenses (KES)</th></tr>
+    </thead>
+    <tbody>
+        {% for label in proj_labels %}
+        <tr>
+            <td>{{ label }}</td>
+            <td style="text-align:right;">
+                {% with revenue_proj_full|slice:forloop.counter0|slice:":1" as v %}
+                    {{ v.0|floatformat:2 }}
+                {% endwith %}
+            </td>
+            <td style="text-align:right;">
+                {% with expense_proj_full|slice:forloop.counter0|slice:":1" as v %}
+                    {{ v.0|floatformat:2 }}
+                {% endwith %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<div class="footer">
+    KPIConsole — Hospital Financial Intelligence &bull; Generated {{ generated_at }} &bull; Confidential
+</div>
+</body>
+</html>

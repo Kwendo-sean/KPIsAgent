@@ -1,7 +1,11 @@
 import json
+import logging
 import re
+import time
 
 from django.conf import settings
+
+logger = logging.getLogger("kpi.ai_agent")
 
 try:
     import anthropic as _anthropic_sdk
@@ -11,21 +15,23 @@ except ImportError:
 from .pdf_extractor import BankStatementPDFExtractor
 from .pii_redactor import redact as _redact_pii
 
-# Model used for all text analysis
 _CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+
+# Max characters per extraction batch.
+# ~15k chars ≈ ~110 transactions → ~3,500 tokens output — well within Haiku's 8,192 limit.
+_BATCH_CHAR_LIMIT = 15_000
+
+_RETRY_DELAYS = [1, 2, 4]  # seconds between retries
 
 
 def _claude_client():
-    """Return an Anthropic client, reading the key from Django settings then os.environ."""
     if not _anthropic_sdk:
-        print("[AI_AGENT] anthropic SDK not installed")
+        logger.warning("anthropic SDK not installed")
         return None
 
     import os
     from pathlib import Path
 
-    # Re-run load_dotenv here so the key is available even if Django's settings
-    # module loaded before the .env file was parsed (common in some run configs).
     try:
         from dotenv import load_dotenv as _lde
         _lde(Path(__file__).resolve().parent.parent / ".env", override=False)
@@ -37,30 +43,23 @@ def _claude_client():
         or os.environ.get("ANTHROPIC_API_KEY", "").strip()
     )
     if not api_key:
-        print("[AI_AGENT] ANTHROPIC_API_KEY is not set — AI analysis disabled")
+        logger.warning("ANTHROPIC_API_KEY is not set — AI analysis disabled")
         return None
     return _anthropic_sdk.Anthropic(api_key=api_key)
 
 
 def _strip_code_fences(text: str) -> str:
-    """Remove markdown code fences that Claude sometimes wraps around HTML/JSON responses."""
     import re as _re
-    # Remove ```html ... ``` or ``` ... ``` wrappers
     stripped = _re.sub(r"^```[a-zA-Z]*\s*\n?", "", text.strip())
     stripped = _re.sub(r"\n?```\s*$", "", stripped.strip())
     return stripped.strip()
 
 
 def _extract_html_body(text: str) -> str:
-    """
-    If Claude returns a full HTML document, extract just the <body> content.
-    Otherwise return as-is (already a fragment).
-    """
     import re as _re
     body_match = _re.search(r"<body[^>]*>(.*?)</body>", text, _re.DOTALL | _re.IGNORECASE)
     if body_match:
         return body_match.group(1).strip()
-    # Strip any stray <!DOCTYPE...> or <html>/<head> wrappers without a </body>
     cleaned = _re.sub(r"<!DOCTYPE[^>]*>", "", text, flags=_re.IGNORECASE)
     cleaned = _re.sub(r"<html[^>]*>|</html>", "", cleaned, flags=_re.IGNORECASE)
     cleaned = _re.sub(r"<head[^>]*>.*?</head>", "", cleaned, flags=_re.DOTALL | _re.IGNORECASE)
@@ -69,19 +68,26 @@ def _extract_html_body(text: str) -> str:
 
 
 def _ask(client, prompt: str, max_tokens: int = 1024) -> str | None:
-    """Send a single-turn prompt to Claude and return the text, or None on failure."""
+    """Send a prompt to Claude with retry on transient failures."""
     if client is None:
         return None
-    try:
-        response = client.messages.create(
-            model=_CLAUDE_MODEL,
-            max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text if response.content else None
-    except Exception as e:
-        print(f"[AI_AGENT] _ask failed: {type(e).__name__}: {e}")
-        return None
+    for attempt, delay in enumerate([0] + _RETRY_DELAYS, start=1):
+        if delay:
+            time.sleep(delay)
+        try:
+            response = client.messages.create(
+                model=_CLAUDE_MODEL,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.content[0].text if response.content else None
+        except Exception as e:
+            if attempt <= len(_RETRY_DELAYS):
+                logger.warning("_ask attempt %d failed: %s — retrying in %ss", attempt, e, _RETRY_DELAYS[attempt - 1] if attempt <= len(_RETRY_DELAYS) else 0)
+            else:
+                logger.error("_ask failed after %d attempts: %s", attempt, e)
+                return None
+    return None
 
 
 class HospitalKPIAgent:
@@ -91,11 +97,10 @@ class HospitalKPIAgent:
     DAILY_CURRENCY_UNIT = "KES/Day"
 
     def __init__(self):
-        self._client = None  # lazily initialised on first use
+        self._client = None
 
     @property
     def client(self):
-        """Return a live Anthropic client, creating one if needed."""
         if self._client is None:
             self._client = _claude_client()
         return self._client
@@ -106,50 +111,232 @@ class HospitalKPIAgent:
 
     def ocr_pdf_pages(self, page_images_b64: list[str]) -> str | None:
         """
-        Send up to 5 base-64 encoded PNG images of PDF pages to Claude Vision
-        and get back the extracted text.
-        page_images_b64: list of base64-encoded PNG strings (one per page).
-        Returns the extracted text, or None if OCR is unavailable.
+        Send PDF page images to Claude Vision for OCR.
+        Processes in batches of 5 to respect API limits.
         """
         if self.client is None or not page_images_b64:
             return None
-        content = []
-        for img_b64 in page_images_b64[:5]:
+
+        all_text_parts = []
+        batch_size = 5
+        for batch_start in range(0, len(page_images_b64), batch_size):
+            batch = page_images_b64[batch_start:batch_start + batch_size]
+            content = []
+            for img_b64 in batch:
+                content.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/png", "data": img_b64},
+                })
             content.append({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/png",
-                    "data": img_b64,
-                },
+                "type": "text",
+                "text": (
+                    "You are an OCR engine. Extract ALL text from these bank statement "
+                    "page images, preserving structure: dates, transaction descriptions, "
+                    "amounts (debits, credits, balances). Output the raw text only — "
+                    "no commentary, no markdown fencing."
+                ),
             })
-        content.append({
-            "type": "text",
-            "text": (
-                "You are an OCR engine. Extract ALL text from these bank statement "
-                "page images, preserving structure: dates, transaction descriptions, "
-                "amounts (debits, credits, balances). Output the raw text only — "
-                "no commentary, no markdown fencing."
-            ),
-        })
+            try:
+                response = self.client.messages.create(
+                    model=_CLAUDE_MODEL,
+                    max_tokens=4096,
+                    messages=[{"role": "user", "content": content}],
+                )
+                if response.content:
+                    all_text_parts.append(response.content[0].text)
+            except Exception as e:
+                logger.error("OCR batch %d failed: %s", batch_start // batch_size + 1, e)
+
+        return "\n".join(all_text_parts) if all_text_parts else None
+
+    # ──────────────────────────────────────────────
+    # Batched transaction extraction
+    # ──────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        """
+        For M-PESA and similar concatenated statement text (no newlines),
+        insert a newline before each transaction's receipt code so that
+        line-based chunking splits cleanly at transaction boundaries.
+        """
+        mpesa_re = re.compile(r'([A-Z0-9]{10,12})\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})')
+        if not mpesa_re.search(text):
+            return text
+        return mpesa_re.sub(r'\n\1 \2', text)
+
+    @staticmethod
+    def _chunk_text(text: str, max_chars: int) -> list[str]:
+        """Split text at line boundaries, falling back to word boundaries for very long lines."""
+        if len(text) <= max_chars:
+            return [text]
+        chunks = []
+        lines = text.splitlines(keepends=True)
+        current: list[str] = []
+        current_len = 0
+        for line in lines:
+            if len(line) > max_chars:
+                if current:
+                    chunks.append("".join(current))
+                    current, current_len = [], 0
+                start = 0
+                while start < len(line):
+                    end = start + max_chars
+                    if end >= len(line):
+                        current.append(line[start:])
+                        current_len += len(line) - start
+                        break
+                    split_at = line.rfind(" ", start, end)
+                    if split_at <= start:
+                        split_at = end
+                    chunks.append(line[start:split_at])
+                    start = split_at + 1
+            elif current_len + len(line) > max_chars and current:
+                chunks.append("".join(current))
+                current = [line]
+                current_len = len(line)
+            else:
+                current.append(line)
+                current_len += len(line)
+        if current:
+            chunks.append("".join(current))
+        return chunks
+
+    def _extract_batch(self, chunk: str, batch_num: int, total_batches: int) -> list[dict]:
+        """Send one text chunk to Claude and return a list of parsed transactions."""
+        safe_chunk = _redact_pii(chunk)
+        prompt = (
+            f"You are a financial transaction extraction expert specialised in Kenyan bank statements.\n"
+            f"Extract ALL transactions from this bank statement text segment.\n"
+            f"This is segment {batch_num} of {total_batches} from the same statement.\n\n"
+            "── M-PESA FORMAT GUIDE ──────────────────────────────────────────────────\n"
+            "If the text is an M-PESA statement, each transaction line begins with a\n"
+            "10–12 character receipt code (e.g. UDEPE0P493) followed by date (YYYY-MM-DD)\n"
+            "and time (HH:MM:SS). Parse each such line as one transaction.\n\n"
+            "DEPOSIT keywords: 'Funds received from', 'Customer Payment', 'DEPOSIT KES',\n"
+            "  'Salary', 'Received'\n"
+            "WITHDRAWAL keywords: 'Sent to', 'Buy Goods', 'Withdraw Cash', 'Pay Bill',\n"
+            "  'Airtime', 'Business Payment', 'Agent Withdrawal', 'Merchant Payment'\n\n"
+            "Withdrawal amount = the NEGATIVE number before the running balance (remove the minus sign).\n"
+            "Deposit amount   = the number after 'DEPOSIT KES' or the first positive number.\n\n"
+            "Example M-PESA lines and correct extraction:\n"
+            "  UDEPE0P493 2026-04-14 18:40:07 Customer Payment Funds received from JOHN DOE Completed DEPOSIT KES 5,000.00 10,927.44\n"
+            "  → {\"date\":\"2026-04-14\",\"description\":\"Customer Payment from JOHN DOE\",\"amount\":5000.00,\"type\":\"DEPOSIT\",\"category\":\"Customer Payment\"}\n\n"
+            "  TJVPE8QU4X 2025-10-31 10:25:05 Airtime Purchase Completed -20.00 151.61\n"
+            "  → {\"date\":\"2025-10-31\",\"description\":\"Airtime Purchase\",\"amount\":20.00,\"type\":\"WITHDRAWAL\",\"category\":\"Airtime\"}\n\n"
+            "── GENERAL RULES ────────────────────────────────────────────────────────\n"
+            "- Extract EVERY transaction — do not skip any.\n"
+            "- date: YYYY-MM-DD format.\n"
+            "- amount: positive number only, no commas, no currency symbols. E.g. 12345.67\n"
+            "- type: DEPOSIT (money IN) or WITHDRAWAL (money OUT).\n"
+            "- category: one of: Customer Payment, Salary, Insurance, Refund,\n"
+            "    Staff Salaries, Medical Supplies, Utilities, Rent, Equipment,\n"
+            "    Airtime, Buy Goods, Pay Bill, Send Money, Withdraw Cash, Other.\n"
+            "- Return ONLY a raw JSON array. No commentary, no markdown.\n"
+            "- If no transactions found in this segment, return: []\n\n"
+            f"Text segment:\n{safe_chunk}\n\n"
+            'Return ONLY a JSON array:\n'
+            '[{"date":"YYYY-MM-DD","description":"...","amount":0.00,"type":"DEPOSIT","category":"Other"}]'
+        )
+        text = _ask(self.client, prompt, max_tokens=8192)
+        if not text:
+            logger.warning("Batch %d/%d: no response from Claude", batch_num, total_batches)
+            return []
+
+        clean = _strip_code_fences(text)
+        match = re.search(r"\[.*\]", clean, re.DOTALL)
+        if not match:
+            logger.warning("Batch %d/%d: no JSON array found in response", batch_num, total_batches)
+            return []
+
         try:
-            response = self.client.messages.create(
-                model=_CLAUDE_MODEL,
-                max_tokens=4096,
-                messages=[{"role": "user", "content": content}],
-            )
-            return response.content[0].text if response.content else None
-        except Exception:
-            return None
+            raw_list = json.loads(match.group())
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.error("Batch %d JSON parse error: %s", batch_num, exc)
+            return []
+
+        validated = []
+        for tx in raw_list:
+            if not isinstance(tx, dict):
+                continue
+            date_str = str(tx.get("date", "")).strip()
+            description = str(tx.get("description", "Bank transaction")).strip() or "Bank transaction"
+            try:
+                amount = abs(float(str(tx.get("amount", 0)).replace(",", "")))
+            except (ValueError, TypeError):
+                continue
+            tx_type = str(tx.get("type", "DEPOSIT")).upper()
+            if tx_type not in ("DEPOSIT", "WITHDRAWAL", "TRANSFER"):
+                tx_type = "DEPOSIT"
+            category = str(tx.get("category", "Other")).strip() or "Other"
+            if amount <= 0:
+                continue
+            validated.append({
+                "date": date_str,
+                "description": description,
+                "amount": amount,
+                "type": tx_type,
+                "category": category,
+            })
+        return validated
+
+    def extract_transactions_in_batches(self, raw_text: str) -> list[dict]:
+        """
+        Split raw_text into chunks and extract transactions from each chunk
+        via sequential Claude API calls. Merges and deduplicates results.
+        """
+        normalized = self._normalize_text(raw_text)
+        chunks = self._chunk_text(normalized, _BATCH_CHAR_LIMIT)
+        logger.info("Batched extraction: %s chars → %d batch(es)", f"{len(raw_text):,}", len(chunks))
+
+        all_transactions: list[dict] = []
+        for idx, chunk in enumerate(chunks):
+            batch_num = idx + 1
+            logger.info("Batch %d/%d: %s chars", batch_num, len(chunks), f"{len(chunk):,}")
+            batch_txs = self._extract_batch(chunk, batch_num, len(chunks))
+            logger.info("Batch %d → %d transactions", batch_num, len(batch_txs))
+            all_transactions.extend(batch_txs)
+
+        # Deduplicate: allow same description+type+date if amounts differ by >1% (different transactions)
+        seen: set[tuple] = set()
+        unique: list[dict] = []
+        for tx in all_transactions:
+            amount_bucket = round(tx.get("amount", 0) / 10) * 10  # bucket to nearest 10
+            key = (tx.get("date"), tx.get("description", "")[:80], amount_bucket, tx.get("type"))
+            if key not in seen:
+                seen.add(key)
+                unique.append(tx)
+
+        logger.info("Batched extraction complete: %d unique transactions", len(unique))
+        return unique
+
+    def _validate_completeness(self, transactions: list[dict], stated_total_deposits: float, stated_total_withdrawals: float) -> None:
+        """Log a warning if extracted totals differ significantly from stated totals."""
+        if not stated_total_deposits and not stated_total_withdrawals:
+            return
+        extracted_dep = sum(t["amount"] for t in transactions if t.get("type") == "DEPOSIT")
+        extracted_wd  = sum(t["amount"] for t in transactions if t.get("type") == "WITHDRAWAL")
+        if stated_total_deposits > 0:
+            dep_diff_pct = abs(extracted_dep - stated_total_deposits) / stated_total_deposits * 100
+            if dep_diff_pct > 20:
+                logger.warning(
+                    "Completeness check: stated deposits=%.2f, extracted=%.2f (%.1f%% gap — some transactions may be missing)",
+                    stated_total_deposits, extracted_dep, dep_diff_pct,
+                )
+        if stated_total_withdrawals > 0:
+            wd_diff_pct = abs(extracted_wd - stated_total_withdrawals) / stated_total_withdrawals * 100
+            if wd_diff_pct > 20:
+                logger.warning(
+                    "Completeness check: stated withdrawals=%.2f, extracted=%.2f (%.1f%% gap)",
+                    stated_total_withdrawals, extracted_wd, wd_diff_pct,
+                )
 
     # ──────────────────────────────────────────────
     # Extraction
     # ──────────────────────────────────────────────
 
     def extract_csv_structure_with_ai(self, csv_head_text: str) -> dict | None:
-        # Redact PII from the sample rows before sending to Claude
         safe_csv = _redact_pii(csv_head_text)
-
         prompt = f"""You are a data extraction expert. Analyze the following CSV header/sample rows and identify the zero-based column indices for each financial field.
 
 CSV Sample:
@@ -176,7 +363,6 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
                 except (json.JSONDecodeError, ValueError):
                     pass
 
-        # Header-name fallback
         mapping = {k: None for k in ("date_index", "description_index", "amount_index",
                                      "debit_index", "credit_index", "balance_index",
                                      "transaction_type_index")}
@@ -209,63 +395,95 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
         return None
 
     def extract_financial_data(self, bank_statement_text: str) -> dict | None:
-        # Redact PII before sending to Claude — account numbers, phone numbers,
-        # card numbers, names, and addresses are stripped. Dates and amounts are kept.
         safe_text = _redact_pii(bank_statement_text)
-        print(f"[AI_AGENT] extract_financial_data called. Original text length={len(bank_statement_text)}, redacted length={len(safe_text)}")
-        print(f"[AI_AGENT] First 300 chars of redacted text: {repr(safe_text[:300])}")
+        logger.info("extract_financial_data: %s chars", f"{len(bank_statement_text):,}")
 
-        prompt = f"""You are a financial data extraction expert. Extract ALL data from this bank statement text.
+        transactions: list[dict] = []
+        if self.client is not None:
+            transactions = self.extract_transactions_in_batches(bank_statement_text)
 
-CRITICAL RULES:
-- Return ONLY raw JSON — no markdown, no code fences, no explanatory text.
-- All monetary amounts must be plain numbers (no commas, no currency symbols). E.g. 12345.67 not "12,345.67" or "KES 12,345".
-- statement_period_start = EARLIEST date found; statement_period_end = LATEST date. Even if the statement lists newest first.
-- transaction "type" must be exactly "DEPOSIT" or "WITHDRAWAL" — nothing else.
-- Extract EVERY transaction line you can see — do not summarise or skip rows.
-- If you cannot determine a field, use 0 for numbers and null for dates.
+        if not transactions:
+            logger.warning("Claude batched extraction returned nothing — using regex fallback")
+            regex_data = BankStatementPDFExtractor.build_fallback_financial_data_from_text(bank_statement_text)
+            if regex_data and regex_data.get("transactions"):
+                transactions = regex_data["transactions"]
+            elif regex_data:
+                return regex_data
+            else:
+                return None
 
-Bank Statement Text:
-{safe_text[:12000]}
+        summary_prompt = (
+            "You are a financial data extraction expert specialized in M-PESA and bank statements.\n"
+            "Extract ONLY the summary fields — do NOT list individual transactions.\n\n"
+            "RULES:\n"
+            "- Return ONLY raw JSON, no markdown, no code fences.\n"
+            "- All monetary amounts: plain numbers, no commas, no currency symbols. E.g. 12345.67\n"
+            "- For M-PESA: IGNORE page-header grouping dates (e.g. 'Dec. 25, 2027') — PDF layout artifacts.\n"
+            "  Use ONLY the ISO dates inside receipt lines (RECEIPT_CODE YYYY-MM-DD HH:MM:SS).\n"
+            "- statement_period_start = EARLIEST receipt-line date\n"
+            "- statement_period_end   = LATEST receipt-line date\n"
+            "- If opening balance is not stated, use 0.00\n"
+            "- If closing balance is not stated, use 0.00 (will be recalculated)\n\n"
+            f"Bank Statement Text (first 15000 chars):\n{safe_text[:15000]}\n\n"
+            "Respond ONLY with valid JSON:\n"
+            '{"statement_period_start":"YYYY-MM-DD","statement_period_end":"YYYY-MM-DD",'
+            '"opening_balance":0.00,"closing_balance":0.00,"total_deposits":0.00,"total_withdrawals":0.00}'
+        )
+        summary_text = _ask(self.client, summary_prompt, max_tokens=512)
+        logger.info("summary response: %s", repr(summary_text[:300]) if summary_text else "None")
 
-Respond ONLY with valid JSON:
-{{
-    "statement_period_start": "YYYY-MM-DD",
-    "statement_period_end": "YYYY-MM-DD",
-    "opening_balance": 0.00,
-    "closing_balance": 0.00,
-    "total_deposits": 0.00,
-    "total_withdrawals": 0.00,
-    "transactions": [
-        {{"date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "type": "DEPOSIT|WITHDRAWAL|TRANSFER"}}
-    ]
-}}"""
-        text = _ask(self.client, prompt, max_tokens=4096)
-        print(f"[AI_AGENT] extract_financial_data raw response (first 500 chars): {repr(text[:500]) if text else 'None'}")
-        if text:
-            clean = _strip_code_fences(text)
+        summary: dict = {}
+        if summary_text:
+            clean = _strip_code_fences(summary_text)
             match = re.search(r"\{.*\}", clean, re.DOTALL)
             if match:
                 try:
-                    parsed = json.loads(match.group())
-                    tx_count = len(parsed.get("transactions", []))
-                    print(f"[AI_AGENT] Parsed JSON OK — {tx_count} transactions, deposits={parsed.get('total_deposits')}, withdrawals={parsed.get('total_withdrawals')}")
-                    if parsed:
-                        return parsed
-                except (json.JSONDecodeError, ValueError) as e:
-                    print(f"[AI_AGENT] JSON parse error: {e}")
-            else:
-                print(f"[AI_AGENT] No JSON object found in response")
-        print(f"[AI_AGENT] Falling back to regex extractor. Text length={len(bank_statement_text)}")
-        return BankStatementPDFExtractor.build_fallback_financial_data_from_text(bank_statement_text)
+                    summary = json.loads(match.group())
+                except (json.JSONDecodeError, ValueError) as exc:
+                    logger.error("Summary JSON parse error: %s", exc)
+
+        # Validate completeness against stated totals from summary
+        self._validate_completeness(
+            transactions,
+            float(summary.get("total_deposits") or 0),
+            float(summary.get("total_withdrawals") or 0),
+        )
+
+        total_dep = sum(t["amount"] for t in transactions if t.get("type") == "DEPOSIT")
+        total_wd  = sum(t["amount"] for t in transactions if t.get("type") == "WITHDRAWAL")
+
+        dated = [t for t in transactions if t.get("date")]
+        dated.sort(key=lambda t: t["date"])
+
+        opening_balance = float(summary.get("opening_balance") or 0.0)
+        closing_balance = float(summary.get("closing_balance") or 0.0)
+        if closing_balance == 0.0:
+            closing_balance = opening_balance + total_dep - total_wd
+
+        period_start = dated[0]["date"]  if dated else summary.get("statement_period_start")
+        period_end   = dated[-1]["date"] if dated else summary.get("statement_period_end")
+
+        result = {
+            "statement_period_start": period_start,
+            "statement_period_end":   period_end,
+            "opening_balance":  opening_balance,
+            "closing_balance":  closing_balance,
+            "total_deposits":   total_dep,
+            "total_withdrawals": total_wd,
+            "transactions": transactions,
+        }
+        logger.info(
+            "Final result: %d transactions, deposits=%s, withdrawals=%s, period=%s → %s",
+            len(transactions), f"{total_dep:,.2f}", f"{total_wd:,.2f}", period_start, period_end,
+        )
+        return result
 
     # ──────────────────────────────────────────────
-    # KPI Calculation  (pure Python — no AI needed)
+    # KPI Calculation
     # ──────────────────────────────────────────────
 
     @staticmethod
     def _amt(t) -> float:
-        """Safely parse an amount field that may be a string like '1,234.56'."""
         val = t.get("amount", 0)
         if isinstance(val, (int, float)):
             return float(val)
@@ -282,10 +500,13 @@ Respond ONLY with valid JSON:
         kpis = {}
         days = max(period_days, 1)
 
-        total_deposits    = sum(self._amt(t) for t in transactions if self._tx_type(t) in ("DEPOSIT",  "CREDIT", "CR"))
-        total_withdrawals = sum(self._amt(t) for t in transactions if self._tx_type(t) in ("WITHDRAWAL","DEBIT",  "DR"))
-        deposit_amounts    = [self._amt(t) for t in transactions if self._tx_type(t) in ("DEPOSIT",  "CREDIT", "CR")]
-        withdrawal_amounts = [self._amt(t) for t in transactions if self._tx_type(t) in ("WITHDRAWAL","DEBIT",  "DR")]
+        deposits    = [t for t in transactions if self._tx_type(t) in ("DEPOSIT",  "CREDIT", "CR")]
+        withdrawals = [t for t in transactions if self._tx_type(t) in ("WITHDRAWAL", "DEBIT", "DR")]
+
+        total_deposits    = sum(self._amt(t) for t in deposits)
+        total_withdrawals = sum(self._amt(t) for t in withdrawals)
+        deposit_amounts    = [self._amt(t) for t in deposits]
+        withdrawal_amounts = [self._amt(t) for t in withdrawals]
 
         expense_ratio = (total_withdrawals / total_deposits * 100) if total_deposits > 0 else 0
         net_income = total_deposits - total_withdrawals
@@ -303,30 +524,212 @@ Respond ONLY with valid JSON:
         runway_months = (liquidity_ratio / 30) if liquidity_ratio else 0
         balance_to_expense_ratio = (closing_balance / total_withdrawals * 100) if total_withdrawals > 0 else 0
 
-        kpis["Total_Revenue"] = {"value": total_deposits, "unit": self.CURRENCY_UNIT, "type": "REVENUE", "description": "Total deposits/income in the period"}
-        kpis["Average_Daily_Revenue"] = {"value": total_deposits / days, "unit": self.DAILY_CURRENCY_UNIT, "type": "REVENUE", "description": f"Average daily revenue over {days} days"}
-        kpis["Average_Deposit_Size"] = {"value": avg_deposit_size, "unit": self.CURRENCY_UNIT, "type": "REVENUE", "description": "Average size of incoming deposits"}
-        kpis["Deposit_Frequency"] = {"value": deposit_frequency, "unit": "Deposits", "type": "REVENUE", "description": "Number of incoming deposit transactions"}
-        kpis["Total_Expenses"] = {"value": total_withdrawals, "unit": self.CURRENCY_UNIT, "type": "COST", "description": "Total expenses in the period"}
-        kpis["Average_Daily_Expense"] = {"value": total_withdrawals / days, "unit": self.DAILY_CURRENCY_UNIT, "type": "COST", "description": f"Average daily expenses over {days} days"}
-        kpis["Average_Expense_Size"] = {"value": avg_withdrawal_size, "unit": self.CURRENCY_UNIT, "type": "COST", "description": "Average size of outgoing expense transactions"}
-        kpis["Expense_Frequency"] = {"value": expense_frequency, "unit": "Expenses", "type": "COST", "description": "Number of outgoing expense transactions"}
-        kpis["Expense_to_Revenue_Ratio"] = {"value": expense_ratio, "unit": "%", "type": "COST", "description": "Expenses as percentage of revenue"}
-        kpis["Net_Income"] = {"value": net_income, "unit": self.CURRENCY_UNIT, "type": "PROFITABILITY", "description": "Revenue minus expenses"}
-        kpis["Profit_Margin"] = {"value": profit_margin, "unit": "%", "type": "PROFITABILITY", "description": "Net profit as percentage of revenue"}
-        kpis["Largest_Deposit"] = {"value": largest_deposit, "unit": self.CURRENCY_UNIT, "type": "PROFITABILITY", "description": "Largest single incoming transaction"}
-        kpis["Largest_Expense"] = {"value": largest_expense, "unit": self.CURRENCY_UNIT, "type": "PROFITABILITY", "description": "Largest single outgoing transaction"}
-        kpis["Net_Cash_Flow"] = {"value": closing_balance - opening_balance, "unit": self.CURRENCY_UNIT, "type": "CASHFLOW", "description": "Change in cash balance over the period"}
-        kpis["Closing_Balance"] = {"value": closing_balance, "unit": self.CURRENCY_UNIT, "type": "CASHFLOW", "description": "Final cash balance"}
-        kpis["Cash_Conversion_Ratio"] = {"value": profit_margin, "unit": "%", "type": "CASHFLOW", "description": "Percentage of revenue converted to net cash"}
-        kpis["Cash_Runway_Months"] = {"value": runway_months, "unit": "Months", "type": "CASHFLOW", "description": "Approximate cash runway at current expense levels"}
-        kpis["Transaction_Count"] = {"value": transaction_count, "unit": "Count", "type": "EFFICIENCY", "description": "Total number of transactions"}
-        kpis["Average_Transaction_Size"] = {"value": avg_transaction_size, "unit": self.CURRENCY_UNIT, "type": "EFFICIENCY", "description": "Average size of all transactions"}
-        kpis["Operating_Margin"] = {"value": profit_margin, "unit": "%", "type": "FINANCIAL_HEALTH", "description": "Operating profit margin"}
-        kpis["Liquidity_Days"] = {"value": min(liquidity_ratio, 999), "unit": "Days", "type": "FINANCIAL_HEALTH", "description": "Days of expenses covered by current balance"}
-        kpis["Balance_to_Expense_Ratio"] = {"value": balance_to_expense_ratio, "unit": "%", "type": "FINANCIAL_HEALTH", "description": "Closing balance as a percentage of total expenses"}
+        # ── Anomaly detection ────────────────────────────────────
+        anomaly_count = 0
+        if deposit_amounts and len(deposit_amounts) >= 3:
+            mean_dep = sum(deposit_amounts) / len(deposit_amounts)
+            variance = sum((x - mean_dep) ** 2 for x in deposit_amounts) / len(deposit_amounts)
+            std_dep = variance ** 0.5
+            anomaly_count += sum(1 for x in deposit_amounts if abs(x - mean_dep) > 2.5 * std_dep)
+        if withdrawal_amounts and len(withdrawal_amounts) >= 3:
+            mean_wd = sum(withdrawal_amounts) / len(withdrawal_amounts)
+            variance = sum((x - mean_wd) ** 2 for x in withdrawal_amounts) / len(withdrawal_amounts)
+            std_wd = variance ** 0.5
+            anomaly_count += sum(1 for x in withdrawal_amounts if abs(x - mean_wd) > 2.5 * std_wd)
+
+        # ── M-PESA specific KPIs ──────────────────────────────────
+        airtime_total = sum(
+            self._amt(t) for t in withdrawals
+            if "airtime" in str(t.get("description", "")).lower() or
+               str(t.get("category", "")).lower() == "airtime"
+        )
+        paybill_total = sum(
+            self._amt(t) for t in withdrawals
+            if "pay bill" in str(t.get("description", "")).lower() or
+               str(t.get("category", "")).lower() == "pay bill"
+        )
+        buygoods_total = sum(
+            self._amt(t) for t in withdrawals
+            if "buy goods" in str(t.get("description", "")).lower() or
+               str(t.get("category", "")).lower() == "buy goods"
+        )
+        send_money_total = sum(
+            self._amt(t) for t in withdrawals
+            if "sent to" in str(t.get("description", "")).lower() or
+               str(t.get("category", "")).lower() == "send money"
+        )
+
+        # ── Status helper using thresholds ────────────────────────
+        def _status(value, warn_threshold, critical_threshold, higher_is_worse=True):
+            if higher_is_worse:
+                if value >= critical_threshold:
+                    return "CRITICAL"
+                if value >= warn_threshold:
+                    return "WARNING"
+            else:
+                if value <= critical_threshold:
+                    return "CRITICAL"
+                if value <= warn_threshold:
+                    return "WARNING"
+            return "HEALTHY"
+
+        def _kpi(value, unit, ktype, desc, warn=None, crit=None, higher_is_worse=True):
+            entry = {"value": value, "unit": unit, "type": ktype, "description": desc}
+            if warn is not None and crit is not None:
+                entry["status"] = _status(value, warn, crit, higher_is_worse)
+                entry["warning_threshold"] = warn
+                entry["critical_threshold"] = crit
+            return entry
+
+        kpis["Total_Revenue"]           = _kpi(total_deposits, self.CURRENCY_UNIT, "REVENUE", "Total deposits/income in the period")
+        kpis["Average_Daily_Revenue"]   = _kpi(total_deposits / days, self.DAILY_CURRENCY_UNIT, "REVENUE", f"Average daily revenue over {days} days")
+        kpis["Average_Deposit_Size"]    = _kpi(avg_deposit_size, self.CURRENCY_UNIT, "REVENUE", "Average size of incoming deposits")
+        kpis["Deposit_Frequency"]       = _kpi(deposit_frequency, "Deposits", "REVENUE", "Number of incoming deposit transactions")
+        kpis["Total_Expenses"]          = _kpi(total_withdrawals, self.CURRENCY_UNIT, "COST", "Total expenses in the period")
+        kpis["Average_Daily_Expense"]   = _kpi(total_withdrawals / days, self.DAILY_CURRENCY_UNIT, "COST", f"Average daily expenses over {days} days")
+        kpis["Average_Expense_Size"]    = _kpi(avg_withdrawal_size, self.CURRENCY_UNIT, "COST", "Average size of outgoing expense transactions")
+        kpis["Expense_Frequency"]       = _kpi(expense_frequency, "Expenses", "COST", "Number of outgoing expense transactions")
+        kpis["Expense_to_Revenue_Ratio"] = _kpi(expense_ratio, "%", "COST", "Expenses as percentage of revenue", warn=75, crit=90)
+        kpis["Net_Income"]              = _kpi(net_income, self.CURRENCY_UNIT, "PROFITABILITY", "Revenue minus expenses", warn=0, crit=-1, higher_is_worse=False)
+        kpis["Profit_Margin"]           = _kpi(profit_margin, "%", "PROFITABILITY", "Net profit as percentage of revenue", warn=5, crit=0, higher_is_worse=False)
+        kpis["Largest_Deposit"]         = _kpi(largest_deposit, self.CURRENCY_UNIT, "PROFITABILITY", "Largest single incoming transaction")
+        kpis["Largest_Expense"]         = _kpi(largest_expense, self.CURRENCY_UNIT, "PROFITABILITY", "Largest single outgoing transaction")
+        kpis["Net_Cash_Flow"]           = _kpi(closing_balance - opening_balance, self.CURRENCY_UNIT, "CASHFLOW", "Change in cash balance over the period")
+        kpis["Closing_Balance"]         = _kpi(closing_balance, self.CURRENCY_UNIT, "CASHFLOW", "Final cash balance", warn=50000, crit=10000, higher_is_worse=False)
+        kpis["Cash_Conversion_Ratio"]   = _kpi(profit_margin, "%", "CASHFLOW", "Percentage of revenue converted to net cash")
+        kpis["Cash_Runway_Months"]      = _kpi(runway_months, "Months", "CASHFLOW", "Approximate cash runway at current expense levels", warn=2, crit=1, higher_is_worse=False)
+        kpis["Transaction_Count"]       = _kpi(transaction_count, "Count", "EFFICIENCY", "Total number of transactions")
+        kpis["Average_Transaction_Size"] = _kpi(avg_transaction_size, self.CURRENCY_UNIT, "EFFICIENCY", "Average size of all transactions")
+        kpis["Anomaly_Count"]           = _kpi(anomaly_count, "Transactions", "EFFICIENCY", "Transactions more than 2.5 std deviations from mean amount", warn=3, crit=10)
+        kpis["Operating_Margin"]        = _kpi(profit_margin, "%", "FINANCIAL_HEALTH", "Operating profit margin", warn=5, crit=0, higher_is_worse=False)
+        kpis["Liquidity_Days"]          = _kpi(min(liquidity_ratio, 999), "Days", "FINANCIAL_HEALTH", "Days of expenses covered by current balance", warn=30, crit=7, higher_is_worse=False)
+        kpis["Balance_to_Expense_Ratio"] = _kpi(balance_to_expense_ratio, "%", "FINANCIAL_HEALTH", "Closing balance as a percentage of total expenses")
+
+        # M-PESA specific KPIs (only include if non-zero)
+        if airtime_total > 0:
+            kpis["Airtime_Spend"]       = _kpi(airtime_total, self.CURRENCY_UNIT, "COST", "Total airtime purchases via M-PESA")
+        if paybill_total > 0:
+            kpis["PayBill_Spend"]       = _kpi(paybill_total, self.CURRENCY_UNIT, "COST", "Total Pay Bill transactions (utilities, services)")
+        if buygoods_total > 0:
+            kpis["Buy_Goods_Spend"]     = _kpi(buygoods_total, self.CURRENCY_UNIT, "COST", "Total Buy Goods & Services payments")
+        if send_money_total > 0:
+            kpis["Send_Money_Total"]    = _kpi(send_money_total, self.CURRENCY_UNIT, "COST", "Total funds sent to individuals")
 
         return kpis
+
+    # ──────────────────────────────────────────────
+    # Financial Health Score + Risk Tier
+    # ──────────────────────────────────────────────
+
+    @staticmethod
+    def compute_health_score(kpis: dict) -> dict:
+        """
+        Composite 0–100 financial health score and named risk tier.
+
+        Weights:
+          Profit Margin        25 pts  (20 %+ = full marks)
+          Cash Runway          25 pts  (6+ months = full marks)
+          Expense Ratio        20 pts  (0 % = full marks)
+          Revenue Consistency  15 pts  (≥20 deposits = full marks)
+          Anomaly Penalty    −15 pts  (1.5 pts per anomaly, capped)
+        """
+        pm      = kpis.get("Profit_Margin",           {}).get("value", 0)
+        runway  = kpis.get("Cash_Runway_Months",       {}).get("value", 0)
+        er      = kpis.get("Expense_to_Revenue_Ratio", {}).get("value", 100)
+        dep_f   = kpis.get("Deposit_Frequency",        {}).get("value", 0)
+        anom    = kpis.get("Anomaly_Count",            {}).get("value", 0)
+
+        pm_score      = min(25.0, max(0.0,  pm / 20.0 * 25.0))
+        runway_score  = min(25.0, max(0.0,  runway / 6.0 * 25.0))
+        er_score      = max(0.0, (100.0 - er) / 100.0 * 20.0)
+        freq_score    = min(15.0, max(0.0,  dep_f / 20.0 * 15.0))
+        penalty       = min(15.0, anom * 1.5)
+
+        final = round(max(0.0, min(100.0, pm_score + runway_score + er_score + freq_score - penalty)))
+
+        if   final >= 80: tier, tone = "Stable",    "green"
+        elif final >= 60: tier, tone = "Watchlist", "amber"
+        elif final >= 40: tier, tone = "At Risk",   "orange"
+        elif final >= 20: tier, tone = "Distressed","red"
+        else:             tier, tone = "Critical",  "critical"
+
+        return {
+            "score": final,
+            "tier":  tier,
+            "tone":  tone,
+            "breakdown": {
+                "profit_margin":        round(pm_score, 1),
+                "cash_runway":          round(runway_score, 1),
+                "expense_ratio":        round(er_score, 1),
+                "revenue_consistency":  round(freq_score, 1),
+                "anomaly_penalty":      round(-penalty, 1),
+            },
+        }
+
+    # ──────────────────────────────────────────────
+    # Recurring Payment Detection
+    # ──────────────────────────────────────────────
+
+    @staticmethod
+    def detect_recurring_payments(transactions: list) -> list:
+        """
+        Identify withdrawal transactions that recur approximately monthly
+        (20–45 day intervals) with consistent amounts (within ±25 %).
+
+        Returns a list sorted by avg_amount desc:
+          [{"description", "avg_amount", "occurrences", "avg_interval_days"}, …]
+        """
+        import datetime as _dt
+
+        def _parse(d):
+            if isinstance(d, _dt.date):
+                return d
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y"):
+                try:
+                    return _dt.datetime.strptime(str(d).strip(), fmt).date()
+                except ValueError:
+                    continue
+            return None
+
+        withdrawals = [
+            t for t in transactions
+            if str(t.get("type", t.get("transaction_type", ""))).upper()
+               in ("WITHDRAWAL", "DEBIT", "DR")
+        ]
+
+        # Group by first 35 chars of normalised description
+        groups: dict[str, list] = {}
+        for tx in withdrawals:
+            key = str(tx.get("description", "")).strip()[:35].upper()
+            if not key:
+                continue
+            d = _parse(tx.get("date") or tx.get("transaction_date"))
+            if d is None:
+                continue
+            groups.setdefault(key, []).append((_parse(tx.get("date") or tx.get("transaction_date")), float(tx.get("amount", 0))))
+
+        recurring = []
+        for desc, entries in groups.items():
+            if len(entries) < 2:
+                continue
+            entries_sorted = sorted(entries, key=lambda x: x[0])
+            dates   = [e[0] for e in entries_sorted]
+            amounts = [e[1] for e in entries_sorted]
+            intervals = [(dates[i+1] - dates[i]).days for i in range(len(dates)-1)]
+            avg_interval = sum(intervals) / len(intervals)
+            avg_amount   = sum(amounts) / len(amounts)
+            min_amt, max_amt = min(amounts), max(amounts)
+            variance_ratio = (max_amt / min_amt) if min_amt > 0 else 999
+
+            if 20 <= avg_interval <= 45 and variance_ratio <= 1.25:
+                recurring.append({
+                    "description":       desc,
+                    "avg_amount":        round(avg_amount, 2),
+                    "occurrences":       len(entries_sorted),
+                    "avg_interval_days": round(avg_interval),
+                })
+
+        return sorted(recurring, key=lambda x: x["avg_amount"], reverse=True)
 
     # ──────────────────────────────────────────────
     # Insights & Alerts
@@ -355,19 +758,29 @@ Statement Period: {statement_period}"""
         expense_ratio = kpis.get("Expense_to_Revenue_Ratio", {}).get("value", 0)
         profit_margin = kpis.get("Profit_Margin", {}).get("value", 0)
         liquidity_days = kpis.get("Liquidity_Days", {}).get("value", 999)
+        anomaly_count = kpis.get("Anomaly_Count", {}).get("value", 0)
 
-        if expense_ratio > 80:
-            alerts.append({"severity": "CRITICAL", "title": "High Expense Ratio",
-                           "content": f"Expenses are {expense_ratio:.1f}% of revenue. Cost reduction is urgent."})
+        if expense_ratio > 90:
+            alerts.append({"severity": "CRITICAL", "title": "Critical Expense Ratio",
+                           "content": f"Expenses are {expense_ratio:.1f}% of revenue. Immediate cost reduction is required."})
+        elif expense_ratio > 75:
+            alerts.append({"severity": "WARNING", "title": "High Expense Ratio",
+                           "content": f"Expenses are {expense_ratio:.1f}% of revenue. Review cost centres."})
         if profit_margin < 0:
             alerts.append({"severity": "CRITICAL", "title": "Negative Profit Margin",
                            "content": f"Operating at a loss with {profit_margin:.1f}% margin. Immediate action required."})
         elif profit_margin < 5:
             alerts.append({"severity": "WARNING", "title": "Low Profit Margin",
                            "content": f"Profit margin of {profit_margin:.1f}% is below the recommended 10%."})
-        if liquidity_days < 30:
+        if liquidity_days < 7:
+            alerts.append({"severity": "CRITICAL", "title": "Critical Liquidity",
+                           "content": f"Cash covers only {liquidity_days:.0f} days of expenses. Immediate action required."})
+        elif liquidity_days < 30:
             alerts.append({"severity": "WARNING", "title": "Low Liquidity",
                            "content": f"Cash covers only {liquidity_days:.0f} days of expenses."})
+        if anomaly_count >= 5:
+            alerts.append({"severity": "WARNING", "title": "Unusual Transactions Detected",
+                           "content": f"{anomaly_count} transactions have amounts significantly outside the normal range. Review for errors or fraud."})
         return alerts
 
     # ──────────────────────────────────────────────
@@ -459,24 +872,21 @@ Analytics Context:
 
     def _answer_locally(self, question, kpis):
         q = question.lower()
-        if "profit" in q and "Net Income" in kpis and "Profit Margin" in kpis:
-            ni = kpis["Net Income"]
-            pm = kpis["Profit Margin"]
-            return f"Net Income is {ni['value']:,.2f} {ni['unit']}, and Profit Margin is {pm['value']:.2f}{pm['unit']}."
         mapping = {
-            "profit margin": "Profit Margin", "net income": "Net Income",
-            "profit": "Net Income", "income": "Net Income",
-            "revenue": "Total Revenue", "deposit": "Total Revenue",
-            "expenses": "Total Expenses", "spend": "Total Expenses", "expense": "Total Expenses",
-            "cash flow": "Net Cash Flow", "cashflow": "Net Cash Flow",
-            "closing balance": "Closing Balance", "balance": "Closing Balance",
-            "liquidity": "Liquidity Days", "runway": "Cash Runway Months",
-            "largest expense": "Largest Expense", "largest deposit": "Largest Deposit",
+            "profit margin": "Profit_Margin", "net income": "Net_Income",
+            "profit": "Net_Income", "income": "Net_Income",
+            "revenue": "Total_Revenue", "deposit": "Total_Revenue",
+            "expenses": "Total_Expenses", "spend": "Total_Expenses", "expense": "Total_Expenses",
+            "cash flow": "Net_Cash_Flow", "cashflow": "Net_Cash_Flow",
+            "closing balance": "Closing_Balance", "balance": "Closing_Balance",
+            "liquidity": "Liquidity_Days", "runway": "Cash_Runway_Months",
+            "largest expense": "Largest_Expense", "largest deposit": "Largest_Deposit",
+            "anomal": "Anomaly_Count",
         }
         for phrase, metric_name in mapping.items():
             if phrase in q and metric_name in kpis:
                 metric = kpis[metric_name]
-                return f"{metric_name} is {metric['value']:,.2f} {metric['unit']}."
+                return f"{metric_name.replace('_', ' ')} is {metric['value']:,.2f} {metric['unit']}."
         return "I can answer using the imported KPI data. Ask about revenue, expenses, profit margin, cash flow, balance, or liquidity."
 
     def _answer_from_system_context(self, question, system_context):

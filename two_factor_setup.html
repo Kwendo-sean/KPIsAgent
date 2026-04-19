@@ -1,0 +1,131 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Two-Factor Authentication | KPIConsole{% endblock %}
+{% block eyebrow %}Security{% endblock %}
+{% block page_title %}Two-Factor <em>Authentication</em>{% endblock %}
+{% block subtitle %}Protect your account with TOTP-based two-factor authentication.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .tfa-container { max-width: 540px; }
+    .tfa-status { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-radius: 12px; margin-bottom: 24px; }
+    .tfa-status.enabled { background: #E8F5EE; border: 1px solid #2C7A5C; }
+    .tfa-status.disabled { background: #FEF3C7; border: 1px solid #D97706; }
+    .tfa-status .status-icon { font-size: 2rem; }
+    .tfa-status .status-body strong { display: block; font-size: 1rem; }
+    .tfa-status .status-body span { font-size: .85rem; color: var(--muted); }
+
+    .qr-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px; }
+    .qr-box img { max-width: 200px; border-radius: 8px; }
+    .secret-code { font-family: var(--font-mono); background: var(--surface-alt); padding: 8px 16px; border-radius: 6px; font-size: .9rem; letter-spacing: .1em; display: inline-block; margin-top: 10px; }
+
+    .backup-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+    .backup-code { background: var(--surface-alt); border-radius: 6px; padding: 8px; font-family: var(--font-mono); font-size: .85rem; text-align: center; }
+
+    .code-input { font-size: 1.4rem; letter-spacing: .3em; font-family: var(--font-mono); text-align: center; width: 180px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    .code-input:focus { border-color: var(--accent); outline: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tfa-container">
+    {% if just_enabled %}
+    <div class="panel" style="border: 2px solid var(--primary); margin-bottom: 24px;">
+        <div class="panel-head">
+            <h2 class="panel-title" style="color: var(--primary);"><i class="fas fa-shield-check"></i> 2FA Enabled</h2>
+        </div>
+        <p>Two-factor authentication is now active. Save your backup codes securely — they cannot be recovered later.</p>
+        <h3 style="margin-top: 16px;">Backup Codes</h3>
+        <div class="backup-grid">
+            {% for code in backup_codes %}
+            <div class="backup-code">{{ code }}</div>
+            {% endfor %}
+        </div>
+        <p class="muted" style="font-size: .85rem; margin-top: 8px;">Each code can be used once if you lose access to your authenticator app.</p>
+        <div style="margin-top: 16px;">
+            <a href="{% url 'dashboard' %}" class="primary-btn"><i class="fas fa-house"></i> Go to Dashboard</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Current status -->
+    <div class="tfa-status {% if profile.is_enabled %}enabled{% else %}disabled{% endif %}">
+        <div class="status-icon">
+            {% if profile.is_enabled %}<i class="fas fa-shield-check" style="color: #2C7A5C;"></i>
+            {% else %}<i class="fas fa-shield-exclamation" style="color: #D97706;"></i>{% endif %}
+        </div>
+        <div class="status-body">
+            <strong>{% if profile.is_enabled %}2FA is Active{% else %}2FA is Not Enabled{% endif %}</strong>
+            <span>{% if profile.is_enabled %}Your account is protected with TOTP authentication.
+            {% else %}Enable 2FA to add an extra layer of security to your account.{% endif %}</span>
+        </div>
+    </div>
+
+    {% if not profile.is_enabled and not just_enabled %}
+    <!-- Step 1: Generate secret -->
+    {% if not profile.totp_secret %}
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-key"></i> Get Started</h2>
+        </div>
+        <p>Click below to generate a secret key. Then scan the QR code with an authenticator app (Google Authenticator, Authy, etc.).</p>
+        <form method="post" style="margin-top: 16px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="generate">
+            <button type="submit" class="primary-btn"><i class="fas fa-plus"></i> Generate Secret</button>
+        </form>
+    </div>
+    {% else %}
+    <!-- Step 2: Scan QR and verify -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-qrcode"></i> Scan QR Code</h2>
+        </div>
+        <p>Scan this QR code with your authenticator app, then enter the 6-digit code to verify.</p>
+        <div class="qr-box">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="TOTP QR Code">
+            <p style="margin-top: 10px; font-size: .85rem; color: var(--muted);">Or enter manually:</p>
+            <div class="secret-code">{{ totp_secret }}</div>
+        </div>
+
+        {% if error %}
+        <div class="alert-card" style="margin-bottom: 12px;">
+            <span class="tag danger">Error</span>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        <form method="post" style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="verify">
+            <label for="code" style="font-weight: 600;">Enter the 6-digit code from your app</label>
+            <input type="text" id="code" name="code" class="code-input" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code" inputmode="numeric" placeholder="000000">
+            <button type="submit" class="primary-btn"><i class="fas fa-check"></i> Verify & Enable</button>
+        </form>
+
+        <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="generate">
+                <button type="submit" class="ghost-btn"><i class="fas fa-rotate"></i> Generate New Secret</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% elif profile.is_enabled and not just_enabled %}
+    <!-- Disable 2FA -->
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><i class="fas fa-shield-xmark"></i> Disable 2FA</h2>
+        </div>
+        <p class="muted">Disabling 2FA will remove the extra layer of protection from your account. Your backup codes will also be cleared.</p>
+        <form method="post" style="margin-top: 16px;" onsubmit="return confirm('Are you sure you want to disable 2FA?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="disable">
+            <button type="submit" class="danger-btn"><i class="fas fa-lock-open"></i> Disable 2FA</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
