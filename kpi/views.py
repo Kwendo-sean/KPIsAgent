@@ -84,7 +84,7 @@ def _base_context(request):
 # ──────────────────────────────────────────────
 
 def login_view(request):
-    """Manager login page."""
+    """Manager login page. Redirects to 2FA verification if the user has it enabled."""
     if request.user.is_authenticated:
         return redirect("dashboard")
 
@@ -94,16 +94,81 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            if user.is_staff or hasattr(user, "userprofile"):
-                login(request, user)
-                _audit(request, "LOGIN", f"User {user.username} signed in", user=user)
-                return redirect("dashboard")
-            else:
+            if not (user.is_staff or hasattr(user, "userprofile")):
                 return render(request, "login.html", {"error": "Only managers can access this system."})
+
+            # Check if 2FA is enabled for this user
+            try:
+                tf = TwoFactorProfile.objects.get(user=user, is_enabled=True)
+                if tf.totp_secret:
+                    # Stash the user id and send to verification step (don't log in yet)
+                    request.session["2fa_pending_user"] = user.pk
+                    request.session["2fa_backend"] = user.backend if hasattr(user, "backend") else "django.contrib.auth.backends.ModelBackend"
+                    return redirect("two_factor_verify")
+            except TwoFactorProfile.DoesNotExist:
+                pass
+
+            login(request, user)
+            _audit(request, "LOGIN", f"User {user.username} signed in", user=user)
+            return redirect("dashboard")
         else:
             return render(request, "login.html", {"error": "Invalid credentials."})
 
     return render(request, "login.html")
+
+
+def two_factor_verify_view(request):
+    """Second step of login: validate TOTP code or backup code."""
+    import pyotp
+
+    user_id = request.session.get("2fa_pending_user")
+    if not user_id:
+        return redirect("login")
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        del request.session["2fa_pending_user"]
+        return redirect("login")
+
+    try:
+        tf = TwoFactorProfile.objects.get(user=user, is_enabled=True)
+    except TwoFactorProfile.DoesNotExist:
+        # 2FA was disabled between login steps — just let them in
+        del request.session["2fa_pending_user"]
+        login(request, user, backend=request.session.pop("2fa_backend", "django.contrib.auth.backends.ModelBackend"))
+        return redirect("dashboard")
+
+    error = None
+    if request.method == "POST":
+        code = request.POST.get("code", "").strip().replace(" ", "")
+
+        # Check TOTP
+        totp = pyotp.TOTP(tf.totp_secret)
+        if totp.verify(code, valid_window=1):
+            del request.session["2fa_pending_user"]
+            backend = request.session.pop("2fa_backend", "django.contrib.auth.backends.ModelBackend")
+            login(request, user, backend=backend)
+            _audit(request, "LOGIN", f"User {user.username} signed in (2FA)", user=user)
+            return redirect("dashboard")
+
+        # Check backup codes
+        backup_codes = list(tf.backup_codes or [])
+        if code.upper() in [c.upper() for c in backup_codes]:
+            backup_codes = [c for c in backup_codes if c.upper() != code.upper()]
+            tf.backup_codes = backup_codes
+            tf.save(update_fields=["backup_codes"])
+            del request.session["2fa_pending_user"]
+            backend = request.session.pop("2fa_backend", "django.contrib.auth.backends.ModelBackend")
+            login(request, user, backend=backend)
+            _audit(request, "LOGIN", f"User {user.username} signed in (2FA backup code used)", user=user)
+            return redirect("dashboard")
+
+        error = "Invalid code. Please try again."
+
+    return render(request, "two_factor_verify.html", {"error": error, "username": user.username})
 
 
 def logout_view(request):
@@ -1043,11 +1108,15 @@ def upload_bank_statement(request):
             return JsonResponse({"success": False, "error": f"File too large. Maximum allowed size is 25 MB."}, status=400)
 
         # File type guard (extension + magic bytes)
-        if not (file_name.endswith(".pdf") or file_name.endswith(".csv")):
-            return JsonResponse({"success": False, "error": "Only PDF and CSV files are supported."}, status=400)
+        is_pdf  = file_name.endswith(".pdf")
+        is_csv  = file_name.endswith(".csv")
+        is_xlsx = file_name.endswith(".xlsx")
+        is_xls  = file_name.endswith(".xls")
+        if not (is_pdf or is_csv or is_xlsx or is_xls):
+            return JsonResponse({"success": False, "error": "Only PDF, CSV, and Excel (.xlsx/.xls) files are supported."}, status=400)
         header = uploaded_file.read(8)
         uploaded_file.seek(0)
-        if file_name.endswith(".pdf") and not header.startswith(b"%PDF"):
+        if is_pdf and not header.startswith(b"%PDF"):
             return JsonResponse({"success": False, "error": "The uploaded file does not appear to be a valid PDF."}, status=400)
 
         bank_statement = BankStatement.objects.create(
@@ -1059,38 +1128,63 @@ def upload_bank_statement(request):
         try:
             uploaded_file.seek(0)
 
-            if file_name.endswith(".csv"):
-                # Smart CSV AI parser to handle any column structure securely without token truncation
-                extracted_text = uploaded_file.read().decode('utf-8', errors='replace')
-                bank_statement.extracted_text = extracted_text
-                bank_statement.save()
-
+            if is_csv or is_xlsx or is_xls:
                 agent = HospitalKPIAgent()
-                
-                # Robustly detect delimiter
-                sample = extracted_text[:2048]
-                try:
-                    dialect = csv.Sniffer().sniff(sample)
-                    reader = csv.reader(StringIO(extracted_text), dialect)
-                except csv.Error:
-                    reader = csv.reader(StringIO(extracted_text))
-                
-                lines = list(reader)
+
+                # ── Parse rows from CSV or Excel ───────────────────────────
+                if is_csv:
+                    extracted_text = uploaded_file.read().decode("utf-8", errors="replace")
+                    bank_statement.extracted_text = extracted_text
+                    bank_statement.save()
+                    sample = extracted_text[:2048]
+                    try:
+                        dialect = csv.Sniffer().sniff(sample)
+                        reader = csv.reader(StringIO(extracted_text), dialect)
+                    except csv.Error:
+                        reader = csv.reader(StringIO(extracted_text))
+                    lines = [row for row in reader if any(c.strip() for c in row)]
+
+                elif is_xlsx:
+                    import openpyxl
+                    wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+                    ws = wb.active
+                    lines = []
+                    for row in ws.iter_rows(values_only=True):
+                        cells = [str(c) if c is not None else "" for c in row]
+                        if any(c.strip() for c in cells):
+                            lines.append(cells)
+                    extracted_text = "\n".join([",".join(r) for r in lines])
+                    bank_statement.extracted_text = extracted_text
+                    bank_statement.save()
+
+                else:  # .xls
+                    import xlrd
+                    content = uploaded_file.read()
+                    wb = xlrd.open_workbook(file_contents=content)
+                    ws = wb.sheet_by_index(0)
+                    lines = []
+                    for rx in range(ws.nrows):
+                        cells = [str(ws.cell_value(rx, cx)) for cx in range(ws.ncols)]
+                        if any(c.strip() for c in cells):
+                            lines.append(cells)
+                    extracted_text = "\n".join([",".join(r) for r in lines])
+                    bank_statement.extracted_text = extracted_text
+                    bank_statement.save()
+
                 if not lines:
-                    raise ValueError("The uploaded CSV is empty.")
-                
-                # Filter out empty rows
-                lines = [l for l in lines if any(x.strip() for x in l)]
-                
-                if not lines:
-                    raise ValueError("The uploaded CSV contains no data rows.")
+                    raise ValueError("The uploaded file is empty.")
+                if len(lines) < 2:
+                    raise ValueError("The uploaded file contains no data rows.")
 
                 header_context = "\n".join([",".join(row) for row in lines[:10]])
+                logger.info("CSV/Excel headers: %s", lines[0] if lines else [])
+                logger.info("CSV/Excel sample row: %s", lines[1] if len(lines) > 1 else [])
                 mapping = agent.extract_csv_structure_with_ai(header_context)
-                print(f"DEBUG: Smart CSV Mapping found: {mapping}")
+                logger.info("CSV/Excel mapping: %s", mapping)
 
-                if not mapping or mapping.get("date_index") is None or (mapping.get("amount_index") is None and mapping.get("credit_index") is None):
-                    raise ValueError(f"AI could not determine the structure. Mapping response: {mapping}")
+                has_amount = any(mapping.get(k) is not None for k in ("amount_index", "credit_index", "debit_index"))
+                if not mapping or mapping.get("date_index") is None or not has_amount:
+                    raise ValueError(f"Could not detect column structure. Headers found: {lines[0] if lines else []}. Mapping: {mapping}")
 
                 transactions = []
                 # Find where the data actually starts (it's not always row 1)
@@ -1451,9 +1545,9 @@ def _process_with_financial_data(bank_statement, financial_data):
         bank_statement.total_deposits    = computed_deposits    or financial_data.get("total_deposits", 0)
         bank_statement.total_withdrawals = computed_withdrawals or financial_data.get("total_withdrawals", 0)
         
-        # If closing balance is 0/None but we have transactions, derive it to avoid flat KPIs
-        if (not bank_statement.closing_balance or bank_statement.closing_balance == 0) and (computed_deposits or computed_withdrawals):
-            # Convert to Decimal for precise calculation
+        # Always recompute closing balance from actual transactions — never trust the AI
+        # summary value, which frequently returns total_deposits instead of the true balance.
+        if computed_deposits or computed_withdrawals:
             dep = Decimal(str(computed_deposits))
             wdr = Decimal(str(computed_withdrawals))
             opn = Decimal(str(bank_statement.opening_balance or 0))
@@ -2657,6 +2751,22 @@ def generate_report_pdf(request):
 
 
 # ──────────────────────────────────────────────
+# Queue management
+# ──────────────────────────────────────────────
+
+@login_required(login_url="login")
+def flush_queue_view(request):
+    """Delete all stale OrmQ tasks (fixes BadSignature errors after restarts)."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        from django_q.models import OrmQ
+        deleted, _ = OrmQ.objects.all().delete()
+        return JsonResponse({"success": True, "deleted": deleted})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
 # Multi-currency conversion API
 # ──────────────────────────────────────────────
 

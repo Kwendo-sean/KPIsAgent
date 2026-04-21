@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.login_view, name="login"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
+    path("login/verify/", views.two_factor_verify_view, name="two_factor_verify"),
 
     # ── Core pages ────────────────────────────────────────────────────────
     path("dashboard/", views.dashboard_view, name="dashboard"),
@@ -73,6 +74,7 @@ urlpatterns = [
 
     # ── Misc ──────────────────────────────────────────────────────────────
     path("health/", views.health_check, name="health_check"),
+    path("api/queue/flush/", views.flush_queue_view, name="flush_queue"),
 
     # ── Password reset (Django built-ins) ─────────────────────────────────
     path("password-reset/", auth_views.PasswordResetView.as_view(template_name="password_reset.html"), name="password_reset"),

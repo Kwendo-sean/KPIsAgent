@@ -123,13 +123,53 @@ LOGIN_REDIRECT_URL = "dashboard"
 # ── django-q2 Task Queue (DB-backed, no Redis required) ───────────────────────
 Q_CLUSTER = {
     "name": "hospital_kpi",
+    "secret_key": "hospital-kpi-queue-v1",  # explicit key — never derived from SECRET_KEY
     "workers": 2,
-    "timeout": 300,
-    "retry": 360,
+    "timeout": 900,
+    "retry": 960,
     "queue_limit": 50,
     "bulk": 10,
     "orm": "default",  # Use Django ORM as broker
     "sync": False,     # Set True only in tests to run tasks synchronously
+}
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} [{levelname}] {name}: {message}",
+            "style": "{",
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        # Our app — show INFO and above (includes batch progress, AI provider used, errors)
+        "kpi": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # django-q worker — show INFO so you see task start/done/fail
+        "django_q": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Django itself — warnings and above only (avoids SQL noise)
+        "django": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
 }
 
 # ── Database Cache (avoids Redis while improving dashboard performance) ────────

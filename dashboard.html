@@ -252,19 +252,30 @@
 <div class="health-row">
     <!-- Health score card -->
     <div class="health-card">
-        <div class="dial-wrap">
-            <svg viewBox="0 0 100 100">
-                <circle class="dial-bg" cx="50" cy="50" r="40"/>
-                <circle class="dial-fill" cx="50" cy="50" r="40"
-                    id="dialArc"
-                    stroke="{% if health_tone == 'green' %}var(--good){% elif health_tone == 'amber' %}var(--amber){% elif health_tone == 'orange' %}var(--coral){% else %}var(--bad){% endif %}"
-                    stroke-dasharray="251.2"
-                    stroke-dashoffset="251.2"
-                    transform="rotate(-90 50 50)"/>
-            </svg>
-            <div class="dial-label">
-                <span class="dial-score" style="color:{% if health_tone == 'green' %}var(--good){% elif health_tone == 'amber' %}var(--amber){% elif health_tone == 'orange' %}var(--coral){% else %}var(--bad){% endif %};">{{ health_score }}</span>
-                <span class="dial-unit">/ 100</span>
+        <div class="health-tooltip-wrap">
+            <div class="dial-wrap">
+                <svg viewBox="0 0 100 100">
+                    <circle class="dial-bg" cx="50" cy="50" r="40"/>
+                    <circle class="dial-fill" cx="50" cy="50" r="40"
+                        id="dialArc"
+                        stroke="{% if health_score >= 80 %}var(--score-excellent){% elif health_score >= 65 %}var(--score-good){% elif health_score >= 50 %}var(--score-warning){% else %}var(--score-critical){% endif %}"
+                        stroke-dasharray="251.2"
+                        stroke-dashoffset="251.2"
+                        transform="rotate(-90 50 50)"/>
+                </svg>
+                <div class="dial-label">
+                    <span class="dial-score score-display" id="dialScore"
+                          style="color:{% if health_score >= 80 %}var(--score-excellent){% elif health_score >= 65 %}var(--score-good){% elif health_score >= 50 %}var(--score-warning){% else %}var(--score-critical){% endif %};">0</span>
+                    <span class="dial-unit">/ 100</span>
+                </div>
+            </div>
+            <!-- Breakdown tooltip (hover) -->
+            <div class="health-breakdown">
+                <div class="health-breakdown-row"><span class="hb-label">Liquidity</span><span class="hb-val">28%</span></div>
+                <div class="health-breakdown-row"><span class="hb-label">Profitability</span><span class="hb-val">24%</span></div>
+                <div class="health-breakdown-row"><span class="hb-label">Collection Efficiency</span><span class="hb-val">22%</span></div>
+                <div class="health-breakdown-row"><span class="hb-label">Cost Discipline</span><span class="hb-val">14%</span></div>
+                <div class="health-breakdown-row"><span class="hb-label">Anomalies</span><span class="hb-val">12%</span></div>
             </div>
         </div>
         <div class="health-body">
@@ -274,9 +285,9 @@
             </div>
             <div class="health-title">Financial Health Score</div>
             <div class="health-sub">
-                {% if health_tone == 'green' %}Strong financial position across all key metrics.
-                {% elif health_tone == 'amber' %}Acceptable — one or more metrics need monitoring.
-                {% elif health_tone == 'orange' %}Several indicators are under pressure — take action.
+                {% if health_score >= 80 %}Strong financial position across all key metrics.
+                {% elif health_score >= 65 %}Acceptable — one or more metrics need monitoring.
+                {% elif health_score >= 50 %}Several indicators are under pressure — take action.
                 {% else %}Distressed. Immediate management attention required.{% endif %}
             </div>
             <div class="health-pills">
@@ -296,7 +307,7 @@
             <a class="link-btn" href="{% url 'assistant' %}">Open assistant</a>
         </div>
         {% for alert in alerts %}
-        <div class="alert-row">
+        <div class="alert-row {% if alert.severity == 'CRITICAL' %}sev-critical{% elif alert.severity == 'WARNING' %}sev-warning{% else %}sev-info{% endif %}">
             <span class="tag {% if alert.severity == 'CRITICAL' %}danger{% elif alert.severity == 'WARNING' %}warning{% else %}info{% endif %}">{{ alert.severity }}</span>
             <div>
                 <div class="alert-row-title">{{ alert.title }}</div>
@@ -304,7 +315,7 @@
             </div>
         </div>
         {% empty %}
-        <div class="alert-row">
+        <div class="alert-row sev-info">
             <span class="tag success">Stable</span>
             <div>
                 <div class="alert-row-title">No active alerts</div>
@@ -424,17 +435,70 @@
 
 {% block extra_scripts %}
 {% if total_statements %}
-<!-- Dial animation -->
+<!-- Dial + count-up animations -->
 <script>
 (function() {
-    const arc = document.getElementById('dialArc');
-    if (!arc) return;
-    const score = {{ health_score }};
-    const circumference = 251.2;
-    // Offset: full circle = 251.2 (score 0), zero offset = 251.2 (score 100)
-    const offset = circumference - (score / 100) * circumference;
-    // Animate after a short delay
-    setTimeout(() => { arc.style.strokeDashoffset = offset; }, 120);
+    const arc       = document.getElementById('dialArc');
+    const scoreEl   = document.getElementById('dialScore');
+    const TARGET    = {{ health_score }};
+    const CIRC      = 251.2;
+    const DURATION  = 1200; // ms
+
+    if (!arc || !scoreEl) return;
+
+    // easeOutExpo curve
+    function ease(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+
+    const startTs = performance.now();
+    function frame(now) {
+        const t = Math.min((now - startTs) / DURATION, 1);
+        const e = ease(t);
+        const current = Math.round(TARGET * e);
+        arc.style.strokeDashoffset = CIRC - (e * TARGET / 100) * CIRC;
+        scoreEl.textContent = current;
+        if (t < 1) requestAnimationFrame(frame);
+    }
+    // Small delay so the page layout settles first
+    setTimeout(() => requestAnimationFrame(frame), 100);
+})();
+
+// Count-up for stat card values
+(function() {
+    function easeOut(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+
+    function animateValue(el) {
+        const raw = el.textContent.trim();
+        // Find the first run of digits (with commas and dots)
+        const m = raw.match(/([\d,]+\.?\d*)/);
+        if (!m) return;
+        const numStr = m[1].replace(/,/g, '');
+        const target = parseFloat(numStr);
+        if (!isFinite(target) || target === 0) return;
+
+        const prefix = raw.slice(0, raw.indexOf(m[1]));
+        const suffix = raw.slice(raw.indexOf(m[1]) + m[1].length);
+        const isFloat = m[1].includes('.');
+        const decimals = isFloat ? (m[1].split('.')[1] || '').length : 0;
+
+        const DURATION = 900;
+        const start = performance.now();
+
+        function tick(now) {
+            const t = Math.min((now - start) / DURATION, 1);
+            const val = target * easeOut(t);
+            const formatted = isFloat
+                ? val.toLocaleString('en-KE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+                : Math.round(val).toLocaleString('en-KE');
+            el.textContent = prefix + formatted + suffix;
+            if (t < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    // Stagger each stat card's value
+    document.querySelectorAll('.stat .v').forEach((el, i) => {
+        setTimeout(() => animateValue(el), i * 60);
+    });
 })();
 </script>
 

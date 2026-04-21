@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" id="loginHtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Verification | KPIConsole</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@600;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:        #1A4D3E;
+            --green-2:      #143E32;
+            --green-light:  #2A6B56;
+            --mint:         #7BD3AE;
+            --ink:          #0D1F1A;
+            --form-bg:      #FFFFFF;
+            --body-bg:      #F0F2F0;
+            --text-dark:    #111827;
+            --text-mid:     #374151;
+            --text-light:   #6B7280;
+            --input-bg:     #F9FAFB;
+            --input-border: #D1D5DB;
+            --input-focus:  #1A4D3E;
+            --error-fg:     #B91C1C;
+            --error-bg:     #FEF2F2;
+            --error-border: #FECACA;
+        }
+
+        html, body {
+            min-height: 100%;
+            font-family: "Inter", system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background: var(--body-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .verify-card {
+            background: var(--form-bg);
+            border-radius: 18px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
+            width: 100%;
+            max-width: 420px;
+            margin: 32px 16px;
+            overflow: hidden;
+            position: relative;
+        }
+        .verify-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--green) 0%, var(--mint) 100%);
+        }
+
+        .verify-body { padding: 44px 40px 40px; }
+
+        .verify-icon-wrap {
+            width: 56px; height: 56px;
+            border-radius: 14px;
+            background: #ECFDF5;
+            border: 1px solid #A7F3D0;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 24px;
+            font-size: 1.4rem;
+            color: var(--green);
+        }
+
+        .verify-eyebrow {
+            font-size: 0.70rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 8px;
+        }
+        .verify-title {
+            font-family: "IBM Plex Sans", sans-serif;
+            font-size: 1.6rem; font-weight: 700; letter-spacing: -0.04em;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+        .verify-subtitle {
+            font-size: 0.88rem;
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+        .verify-subtitle strong { color: var(--text-mid); font-weight: 600; }
+
+        .error-banner {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 14px;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            border-radius: 10px;
+            color: var(--error-fg);
+            font-size: 0.86rem; font-weight: 500;
+            margin-bottom: 22px;
+        }
+
+        .field { margin-bottom: 20px; }
+        .field-label {
+            display: block;
+            font-size: 0.80rem; font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 7px;
+        }
+
+        .code-input {
+            width: 100%;
+            padding: 13px 16px;
+            border: 1.5px solid var(--input-border);
+            border-radius: 10px;
+            font: inherit;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.35em;
+            color: var(--text-dark);
+            background: var(--input-bg);
+            text-align: center;
+            transition: border-color 150ms, box-shadow 150ms, background 150ms;
+            outline: none;
+        }
+        .code-input::placeholder {
+            letter-spacing: .1em;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #9CA3AF;
+        }
+        .code-input:focus {
+            border-color: var(--input-focus);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(26,77,62,.12);
+        }
+
+        .btn-verify {
+            width: 100%; padding: 13px;
+            background: var(--green);
+            color: #FFFFFF;
+            border: none; border-radius: 10px;
+            font: inherit; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer;
+            transition: background 150ms, transform 130ms, box-shadow 150ms;
+            box-shadow: 0 4px 14px rgba(14,26,23,.25);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-verify:hover {
+            background: var(--green-light);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(14,26,23,.28);
+        }
+        .btn-verify:active { transform: none; box-shadow: none; }
+
+        .backup-hint {
+            margin-top: 20px;
+            padding: 14px 16px;
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        .backup-hint strong { color: var(--text-mid); }
+
+        .verify-footer {
+            margin-top: 28px;
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--text-light);
+        }
+        .verify-footer a {
+            color: var(--green); font-weight: 600;
+            text-decoration: none;
+        }
+        .verify-footer a:hover { opacity: .7; }
+
+        /* Dark mode */
+        [data-theme="dark"] {
+            --form-bg:      #111816;
+            --body-bg:      #0A0C0B;
+            --text-dark:    #F0F4F2;
+            --text-mid:     #C9D5D0;
+            --text-light:   #8FA39A;
+            --input-bg:     #1A1F1D;
+            --input-border: #2D3730;
+            --input-focus:  #4A9E7E;
+            --error-fg:     #F87171;
+            --error-bg:     rgba(248,113,113,.08);
+            --error-border: rgba(248,113,113,.25);
+        }
+        [data-theme="dark"] .code-input { background: #1A1F1D; color: var(--text-dark); border-color: var(--input-border); }
+        [data-theme="dark"] .code-input:focus { background: #1E2622; }
+        [data-theme="dark"] .verify-icon-wrap { background: rgba(26,77,62,.25); border-color: rgba(123,211,174,.20); }
+        [data-theme="dark"] .backup-hint { background: #1A1F1D; border-color: #2D3730; }
+
+        @media (max-width: 480px) {
+            .verify-body { padding: 36px 24px 32px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="verify-card">
+    <div class="verify-body">
+        <div class="verify-icon-wrap">
+            <i class="fas fa-shield-halved"></i>
+        </div>
+
+        <div class="verify-eyebrow">Two-factor authentication</div>
+        <h1 class="verify-title">Enter your code</h1>
+        <p class="verify-subtitle">
+            Open your authenticator app and enter the 6-digit code for
+            <strong>{{ username }}</strong>.
+        </p>
+
+        {% if error %}
+        <div class="error-banner">
+            <i class="fas fa-circle-exclamation"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" autocomplete="off">
+            {% csrf_token %}
+            <div class="field">
+                <label class="field-label" for="code">Verification code</label>
+                <input
+                    type="text"
+                    id="code"
+                    name="code"
+                    class="code-input"
+                    inputmode="numeric"
+                    pattern="[0-9A-Za-z]{6,8}"
+                    maxlength="8"
+                    placeholder="000000"
+                    autocomplete="one-time-code"
+                    autofocus
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn-verify">
+                <i class="fas fa-check"></i>
+                Verify &amp; Sign In
+            </button>
+        </form>
+
+        <div class="backup-hint">
+            <strong>No access to your authenticator?</strong> Enter one of your
+            8-character backup codes above — each code can only be used once.
+        </div>
+
+        <div class="verify-footer">
+            <a href="{% url 'login' %}">
+                <i class="fas fa-arrow-left" style="font-size:.75rem;"></i>
+                Back to sign in
+            </a>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        var t = localStorage.getItem('kpi-theme');
+        var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme:dark)').matches;
+        document.getElementById('loginHtml').setAttribute('data-theme', dark ? 'dark' : 'light');
+    })();
+
+    // Auto-submit when 6 digits entered, allow 8 chars for backup codes
+    var codeInput = document.getElementById('code');
+    codeInput.addEventListener('input', function () {
+        this.value = this.value.replace(/[^0-9A-Za-z]/g, '');
+        if (this.value.length === 6 && /^\d+$/.test(this.value)) {
+            this.closest('form').submit();
+        }
+    });
+</script>
+</body>
+</html>
