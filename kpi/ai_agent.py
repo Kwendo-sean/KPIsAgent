@@ -26,9 +26,7 @@ _LLM7_MODELS = [
     "GLM-4.6V-Flash",     # fast multimodal model
 ]
 # Gemini fallback — only flash-lite produces clean JSON with responseMimeType
-_GEMINI_MODELS = [
-    "gemini-1.5-flash-8b",
-]
+_GEMINI_MODELS: list[str] = []  # disabled — API key not valid for batch extraction
 _CLAUDE_MODEL         = "claude-haiku-4-5-20251001"
 # OpenRouter — used for insights/reports/Q&A (text output, not JSON extraction)
 _OPENROUTER_MODEL     = "meta-llama/llama-3.3-70b-instruct:free"
@@ -194,7 +192,7 @@ def _ask_claude(prompt: str, max_tokens: int = 1024) -> str | None:
         return None
 
 
-def _ask_gemini(prompt: str, max_tokens: int = 1024, model: str = _GEMINI_MODELS[0], json_mode: bool = False) -> str | None:
+def _ask_gemini(prompt: str, max_tokens: int = 1024, model: str = "gemini-1.5-flash-8b", json_mode: bool = False) -> str | None:
     """Call Gemini via the REST API (no SDK required)."""
     import requests as _req
     api_key = _env_key("GEMINI_API_KEY")

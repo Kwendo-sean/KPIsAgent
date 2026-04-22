@@ -125,8 +125,8 @@ Q_CLUSTER = {
     "name": "hospital_kpi",
     "secret_key": "hospital-kpi-queue-v1",  # explicit key — never derived from SECRET_KEY
     "workers": 2,
-    "timeout": 900,
-    "retry": 960,
+    "timeout": 86400,   # 24 hours — tasks always finish regardless of file size
+    "retry": 90000,     # must be > timeout to prevent re-trigger before completion
     "queue_limit": 50,
     "bulk": 10,
     "orm": "default",  # Use Django ORM as broker
