@@ -1,0 +1,117 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Linked Accounts | KPIConsole{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:28px">
+  <div class="eyebrow"><i class="fas fa-users"></i> Account Management</div>
+  <h1 class="page-title">Linked Accounts</h1>
+  <p style="color:var(--muted);font-size:.93rem;margin-top:6px;max-width:540px">
+    Create sub-accounts for separate businesses or clients. Each account has its own industry, data, and AI analysis. Switch between them using the sidebar.
+  </p>
+</div>
+
+<!-- Current primary account card -->
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:28px;display:flex;align-items:center;gap:16px">
+  <div style="width:42px;height:42px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0">
+    <i class="fas fa-building"></i>
+  </div>
+  <div style="flex:1">
+    <div style="font-weight:600;font-size:.95rem;color:var(--ink)">{{ active_org_name }}</div>
+    <div style="font-size:.80rem;color:var(--muted);margin-top:2px">{{ active_industry_label }} &bull; Primary Account</div>
+  </div>
+  <span style="padding:4px 10px;border-radius:99px;background:var(--mint-soft);color:var(--good);font-size:.75rem;font-weight:600;border:1px solid rgba(47,122,85,.18)">Active</span>
+</div>
+
+<!-- Existing sub-accounts -->
+{% if sub_accounts %}
+<h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:14px">
+  Linked Accounts ({{ sub_accounts|length }})
+</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:36px">
+  {% for sub in sub_accounts %}
+  <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="width:38px;height:38px;border-radius:9px;background:var(--surface-alt);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:1rem;flex-shrink:0">
+        <i class="fas fa-briefcase"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.93rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sub.name }}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:2px">{{ sub.get_industry_display }}</div>
+        {% if sub.contact_name %}<div style="font-size:.78rem;color:var(--subtle);margin-top:1px"><i class="fas fa-user" style="width:12px"></i> {{ sub.contact_name }}</div>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <!-- Switch to this account -->
+      <form method="POST" action="{% url 'switch_account' %}" style="flex:1">
+        {% csrf_token %}
+        <input type="hidden" name="sub_id" value="{{ sub.id }}">
+        <input type="hidden" name="next" value="{% url 'dashboard' %}">
+        <button type="submit" style="width:100%;padding:7px 12px;border-radius:7px;background:var(--green);color:#fff;border:none;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <i class="fas fa-right-to-bracket"></i> Switch to
+        </button>
+      </form>
+      <!-- Delete -->
+      <form method="POST" action="{% url 'delete_subaccount' sub.id %}" onsubmit="return confirm('Delete {{ sub.name }}? All statements linked to this account will be unlinked.')">
+        {% csrf_token %}
+        <button type="submit" style="padding:7px 12px;border-radius:7px;background:transparent;color:var(--muted);border:1px solid var(--line);font:inherit;font-size:.82rem;cursor:pointer;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--bad)';this.style.borderColor='var(--bad)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--line)'">
+          <i class="fas fa-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Create new sub-account -->
+<div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px 26px">
+  <h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:18px">
+    <i class="fas fa-plus-circle" style="color:var(--green);margin-right:8px"></i>Add a Linked Account
+  </h2>
+  <form method="POST" action="{% url 'create_subaccount' %}">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <div style="grid-column:1/-1">
+        <label style="display:block;font-size:.80rem;font-weight:600;color:var(--ink);margin-bottom:6px">Business / Organization Name *</label>
+        <input type="text" name="name" placeholder="e.g. Sunrise Pharmacy, ABC School"
+               style="width:100%;padding:10px 14px;border:1.5px solid var(--line-strong);border-radius:9px;font:inherit;font-size:.91rem;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s"
+               onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--line-strong)'" required>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:.80rem;font-weight:600;color:var(--ink);margin-bottom:6px">Industry *</label>
+        <select name="industry" style="width:100%;padding:10px 14px;border:1.5px solid var(--line-strong);border-radius:9px;font:inherit;font-size:.88rem;color:var(--text);background:var(--bg);outline:none;appearance:none;cursor:pointer;transition:border-color .15s"
+                onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--line-strong)'">
+          {% for sector, items in industry_sectors.items %}
+          <optgroup label="{{ sector }}">
+            {% for key, label in items %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:.80rem;font-weight:600;color:var(--ink);margin-bottom:6px">Contact Name</label>
+        <input type="text" name="contact_name" placeholder="Primary contact"
+               style="width:100%;padding:10px 14px;border:1.5px solid var(--line-strong);border-radius:9px;font:inherit;font-size:.91rem;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s"
+               onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--line-strong)'">
+      </div>
+
+      <div style="grid-column:1/-1">
+        <label style="display:block;font-size:.80rem;font-weight:600;color:var(--ink);margin-bottom:6px">Contact Email</label>
+        <input type="email" name="contact_email" placeholder="contact@example.com"
+               style="width:100%;padding:10px 14px;border:1.5px solid var(--line-strong);border-radius:9px;font:inherit;font-size:.91rem;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s"
+               onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--line-strong)'">
+      </div>
+
+    </div>
+    <div style="margin-top:20px">
+      <button type="submit" style="padding:11px 28px;background:var(--green);color:#fff;border:none;border-radius:9px;font:inherit;font-size:.91rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s"
+              onmouseover="this.style.background='#22614F'" onmouseout="this.style.background='var(--green)'">
+        <i class="fas fa-plus"></i> Create Linked Account
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

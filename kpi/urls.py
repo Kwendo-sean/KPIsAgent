@@ -4,9 +4,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # ── Auth ──────────────────────────────────────────────────────────────
-    path("", views.login_view, name="login"),
+    # ── Landing & Auth ────────────────────────────────────────────────────
+    path("", views.landing_view, name="landing"),
     path("login/", views.login_view, name="login"),
+    path("register/", views.register_view, name="register"),
     path("logout/", views.logout_view, name="logout"),
     path("login/verify/", views.two_factor_verify_view, name="two_factor_verify"),
 
@@ -71,6 +72,12 @@ urlpatterns = [
     # ── PWA ───────────────────────────────────────────────────────────────
     path("manifest.json", views.pwa_manifest, name="pwa_manifest"),
     path("sw.js", views.service_worker, name="service_worker"),
+
+    # ── Sub-Account Management ────────────────────────────────────────────
+    path("accounts/", views.accounts_view, name="accounts"),
+    path("accounts/create/", views.create_subaccount_view, name="create_subaccount"),
+    path("accounts/<int:sub_id>/delete/", views.delete_subaccount_view, name="delete_subaccount"),
+    path("accounts/switch/", views.switch_account_view, name="switch_account"),
 
     # ── Misc ──────────────────────────────────────────────────────────────
     path("health/", views.health_check, name="health_check"),

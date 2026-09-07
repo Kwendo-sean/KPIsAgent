@@ -30,6 +30,12 @@ _GEMINI_MODELS: list[str] = []  # disabled — API key not valid for batch extra
 _CLAUDE_MODEL         = "claude-haiku-4-5-20251001"
 # OpenRouter — used for insights/reports/Q&A (text output, not JSON extraction)
 _OPENROUTER_MODEL     = "meta-llama/llama-3.3-70b-instruct:free"
+# Ollama local model — used when cloud providers are unavailable
+_OLLAMA_MODEL          = "llama3.2"
+# Groq inference model
+_GROQ_MODEL            = "llama-3.3-70b-versatile"
+# Fireworks.ai inference model
+_FIREWORKS_MODEL       = "accounts/fireworks/models/llama-v3p1-70b-instruct"
 
 _BATCH_CHAR_LIMIT = 6_000   # Groq 413 guard: keep payloads well under the request-size limit
 
@@ -74,7 +80,7 @@ def _ask_ollama(prompt: str, max_tokens: int = 1024) -> str | None:
                 "stream": False,
                 "options": {"num_predict": max_tokens, "temperature": 0},
             },
-            timeout=45,   # give up fast if CPU is saturated — cloud fallback takes over
+            timeout=45,
         )
         resp.raise_for_status()
         return resp.json()["message"]["content"]

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPIConsole — Financial Intelligence for Every Industry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Tokens ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #050E0A;
+  --paper:    #0A1A13;
+  --ink:      #E8F2EE;
+  --ink-2:    #A0AFA8;
+  --muted:    #7A9B8C;
+  --subtle:   #4A6658;
+  --line:     rgba(255,255,255,0.07);
+  --line-2:   rgba(255,255,255,0.13);
+  --accent:   #7BD3AE;
+  --accent-2: #A7E8CA;
+  --accent-soft: rgba(123,211,174,0.12);
+  --font-display:"Instrument Serif","Times New Roman",serif;
+  --font-body:"Inter",system-ui,-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --radius-pill:999px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+canvas{display:block}
+
+/* ── Brand mark ─────────────────────────────────────────── */
+.kpi-mark{display:inline-flex;align-items:center;gap:12px;color:var(--ink)}
+.kpi-mark__cube{position:relative;width:30px;height:30px}
+.kpi-mark__cube canvas{width:100%!important;height:100%!important;display:block}
+.kpi-mark__name{font-family:var(--font-display);font-size:1.25rem;font-weight:400;letter-spacing:-0.02em;line-height:1}
+.kpi-mark__name em{font-style:italic;color:var(--accent)}
+
+/* ── Eyebrow ────────────────────────────────────────────── */
+.eyebrow{font-family:var(--font-mono);font-size:.70rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--accent);opacity:.7;display:inline-block}
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.92rem;font-weight:500;letter-spacing:-.005em;cursor:pointer;border:1px solid transparent;transition:transform 180ms ease,background 200ms ease,color 200ms ease,border-color 200ms ease;text-decoration:none;white-space:nowrap}
+.btn--primary{background:var(--accent);color:#061A0F;font-weight:600}
+.btn--primary:hover{background:var(--accent-2);transform:translateY(-1px)}
+.btn--ghost{background:transparent;color:var(--ink);border-color:rgba(255,255,255,.20)}
+.btn--ghost:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.35)}
+.btn--lg{padding:17px 30px;font-size:.96rem}
+
+/* ── Nav ────────────────────────────────────────────────── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 36px;background:rgba(5,14,10,.80);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color 200ms ease}
+.nav.is-scrolled{border-bottom-color:var(--line)}
+.nav__links{display:flex;gap:6px;align-items:center}
+.nav__link{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);padding:8px 14px;border-radius:var(--radius-pill);transition:color 180ms ease,background 180ms ease}
+.nav__link:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+.nav__cta{margin-left:12px;padding:9px 18px;font-family:var(--font-body);font-size:.86rem;font-weight:600;color:#061A0F;background:var(--accent);border-radius:var(--radius-pill);transition:background 200ms ease,transform 180ms ease}
+.nav__cta:hover{background:var(--accent-2);transform:translateY(-1px)}
+
+/* ── Hero ───────────────────────────────────────────────── */
+.hero{position:relative;padding:140px 36px 80px;min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;overflow:hidden}
+.hero__copy{position:relative;z-index:2;max-width:640px}
+.hero__eyebrow{margin-bottom:32px}
+.hero__title{font-family:var(--font-display);font-weight:400;font-size:clamp(3rem,6.4vw,6rem);line-height:.98;letter-spacing:-.035em;color:var(--ink);margin-bottom:28px}
+.hero__title em{font-style:italic;color:var(--accent)}
+.hero__title .swap{position:relative;display:inline-block;font-style:italic;color:var(--accent);min-width:6ch}
+.hero__sub{font-size:1.10rem;line-height:1.55;color:var(--ink-2);max-width:480px;margin-bottom:40px}
+.hero__cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero__stage{position:relative;height:clamp(420px,60vh,620px);z-index:1}
+.hero__stage canvas{width:100%!important;height:100%!important}
+.hero__stagelabel{position:absolute;bottom:10px;left:10px;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--subtle);z-index:3;display:flex;align-items:center;gap:8px}
+.hero__stagelabel::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+
+/* ── Marquee ────────────────────────────────────────────── */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 0;overflow:hidden;background:var(--paper)}
+.marquee__track{display:flex;gap:64px;white-space:nowrap;animation:scroll 50s linear infinite;font-family:var(--font-mono);font-size:.78rem;color:var(--muted);letter-spacing:.10em;text-transform:uppercase}
+.marquee__track span{display:inline-flex;gap:64px}
+.marquee__track .dot{color:var(--accent)}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── Section base ───────────────────────────────────────── */
+section.s{padding:120px 36px;border-bottom:1px solid var(--line)}
+.s__head{display:grid;grid-template-columns:280px 1fr;gap:80px;margin-bottom:80px;align-items:end}
+.s__title{font-family:var(--font-display);font-weight:400;font-size:clamp(2.2rem,4.4vw,3.6rem);line-height:1.0;letter-spacing:-.025em;color:var(--ink);max-width:12ch}
+.s__title em{font-style:italic;color:var(--accent)}
+.s__lede{font-size:1.05rem;color:var(--ink-2);line-height:1.55;max-width:540px}
+.s__index{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:24px}
+
+/* ── Features ───────────────────────────────────────────── */
+.features{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.feature{padding:36px 32px 40px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg);transition:background 220ms ease}
+.feature:nth-child(3n){border-right:0}
+.feature:hover{background:var(--paper)}
+.feature__num{font-family:var(--font-mono);font-size:.70rem;letter-spacing:.16em;color:var(--accent);margin-bottom:28px}
+.feature__title{font-family:var(--font-display);font-weight:400;font-size:1.7rem;line-height:1.05;letter-spacing:-.02em;margin-bottom:14px;color:var(--ink)}
+.feature__title em{font-style:italic;color:var(--accent)}
+.feature__body{font-size:.95rem;line-height:1.6;color:var(--ink-2);max-width:38ch}
+
+/* ── How it works ───────────────────────────────────────── */
+.how__rows{display:flex;flex-direction:column}
+.how-row{display:grid;grid-template-columns:120px 1.2fr 1fr;gap:60px;padding:48px 0;border-top:1px solid var(--line);align-items:start}
+.how-row:last-child{border-bottom:1px solid var(--line)}
+.how-row__num{font-family:var(--font-display);font-style:italic;font-size:4.5rem;line-height:.9;color:var(--accent)}
+.how-row__title{font-family:var(--font-display);font-weight:400;font-size:2.1rem;line-height:1.05;letter-spacing:-.025em;color:var(--ink)}
+.how-row__body{font-size:.98rem;line-height:1.6;color:var(--ink-2);max-width:44ch}
+
+/* ── Industries ─────────────────────────────────────────── */
+.sectors{display:flex;flex-direction:column;gap:56px}
+.sector__name{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:22px;display:flex;align-items:center;gap:14px}
+.sector__name::after{content:"";flex:1;height:1px;background:var(--line)}
+.sector__items{display:flex;flex-wrap:wrap;gap:10px}
+.industry{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border:1px solid var(--line-2);background:var(--paper);border-radius:var(--radius-pill);font-size:.92rem;color:var(--ink-2);transition:border-color 180ms ease,background 180ms ease,color 180ms ease}
+.industry:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.industry__dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+/* ── CTA ────────────────────────────────────────────────── */
+.cta{position:relative;padding:140px 36px 160px;text-align:center;background:var(--paper);overflow:hidden;border-bottom:1px solid var(--line)}
+.cta canvas{position:absolute;inset:0;width:100%!important;height:100%!important;opacity:.6}
+.cta__inner{position:relative;z-index:2;max-width:760px;margin:0 auto}
+.cta__eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:28px}
+.cta__title{font-family:var(--font-display);font-weight:400;font-size:clamp(2.6rem,6vw,5rem);line-height:.98;letter-spacing:-.03em;margin-bottom:22px;color:var(--ink)}
+.cta__title em{font-style:italic;color:var(--accent)}
+.cta__sub{font-size:1.05rem;color:var(--ink-2);max-width:520px;margin:0 auto 40px;line-height:1.6}
+
+/* ── Footer ─────────────────────────────────────────────── */
+.foot{padding:40px 36px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;align-items:center;font-family:var(--font-mono);font-size:.72rem;color:var(--muted);letter-spacing:.08em}
+.foot__center{text-align:center}
+.foot__right{text-align:right;display:flex;gap:18px;justify-content:flex-end}
+.foot a:hover{color:var(--ink)}
+
+/* ── Reveal ─────────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 700ms ease,transform 700ms ease}
+.reveal.is-in{opacity:1;transform:none}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr;padding:120px 24px 60px}
+  .hero__stage{height:380px}
+  .s__head{grid-template-columns:1fr;gap:24px;margin-bottom:56px}
+  section.s{padding:80px 24px}
+  .features{grid-template-columns:1fr}
+  .feature{border-right:0}
+  .how-row{grid-template-columns:1fr;gap:16px;padding:36px 0}
+  .how-row__num{font-size:3rem}
+  .nav{padding:16px 20px}
+  .nav__links .nav__link:not(:last-child){display:none}
+  .foot{grid-template-columns:1fr;text-align:center}
+  .foot__right{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav" id="nav">
+  <a href="/" class="kpi-mark">
+    <span class="kpi-mark__cube" id="navMark"></span>
+    <span class="kpi-mark__name">KPI<em>Console</em></span>
+  </a>
+  <div class="nav__links">
+    <a href="#features" class="nav__link">Features</a>
+    <a href="#industries" class="nav__link">Industries</a>
+    <a href="#how" class="nav__link">Method</a>
+    <a href="/login/" class="nav__link">Sign in</a>
+    <a href="/register/" class="nav__cta">Get started →</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero__copy">
+    <div class="hero__eyebrow eyebrow">001 / Financial Intelligence</div>
+    <h1 class="hero__title">
+      Know your<br>
+      numbers, for<br>
+      <em>any</em> <span class="swap" id="swap">industry</span>.
+    </h1>
+    <p class="hero__sub">
+      Upload a bank statement. KPIConsole extracts every transaction, computes the metrics that matter for <em>your</em> business, and surfaces AI-driven insight — calibrated to your sector.
+    </p>
+    <div class="hero__cta">
+      <a href="/register/" class="btn btn--primary btn--lg">Get started — free</a>
+      <a href="/login/" class="btn btn--ghost btn--lg">Sign in</a>
+    </div>
+  </div>
+  <div class="hero__stage" id="heroStage">
+    <span class="hero__stagelabel">live model · industry profiles</span>
+  </div>
+</section>
+
+<!-- Marquee -->
+<div class="marquee">
+  <div class="marquee__track">
+    <span>Hospitals <span class="dot">●</span> Restaurants <span class="dot">●</span> Schools <span class="dot">●</span> Retail <span class="dot">●</span> Logistics <span class="dot">●</span> SaaS <span class="dot">●</span> Construction <span class="dot">●</span> Agriculture <span class="dot">●</span> NGOs <span class="dot">●</span> Fintech <span class="dot">●</span> Hospitality <span class="dot">●</span> Manufacturing <span class="dot">●</span></span>
+    <span>Hospitals <span class="dot">●</span> Restaurants <span class="dot">●</span> Schools <span class="dot">●</span> Retail <span class="dot">●</span> Logistics <span class="dot">●</span> SaaS <span class="dot">●</span> Construction <span class="dot">●</span> Agriculture <span class="dot">●</span> NGOs <span class="dot">●</span> Fintech <span class="dot">●</span> Hospitality <span class="dot">●</span> Manufacturing <span class="dot">●</span></span>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="s reveal" id="features">
+  <div class="s__head">
+    <div>
+      <div class="s__index">§ 02 — Capabilities</div>
+      <h2 class="s__title">Everything finance <em>should</em> be.</h2>
+    </div>
+    <p class="s__lede">From raw statement to boardroom-ready report — automated, accurate, and aware of how your industry actually operates.</p>
+  </div>
+  <div class="features">
+    <div class="feature"><div class="feature__num">— 01</div><h3 class="feature__title">Smart statement <em>import</em></h3><p class="feature__body">Drop in a PDF or CSV. We extract every transaction — date, description, amount, category — without templates or column mapping.</p></div>
+    <div class="feature"><div class="feature__num">— 02</div><h3 class="feature__title">Industry-specific <em>KPIs</em></h3><p class="feature__body">A hospital sees Cost-per-Patient-Day. A restaurant sees Food Cost %. A retailer sees Stock Turn. The metrics fit the business.</p></div>
+    <div class="feature"><div class="feature__num">— 03</div><h3 class="feature__title">AI financial <em>assistant</em></h3><p class="feature__body">Ask anything in plain English. The assistant understands your industry context and gives precise, sourced answers.</p></div>
+    <div class="feature"><div class="feature__num">— 04</div><h3 class="feature__title">Boardroom <em>reports</em></h3><p class="feature__body">Polished PDF reports with charts, KPI summaries, and AI narrative. Export to PDF, CSV or XLSX in one click.</p></div>
+    <div class="feature"><div class="feature__num">— 05</div><h3 class="feature__title">Multi-account <em>workspaces</em></h3><p class="feature__body">Manage several businesses from one account — each with its own industry profile, data, and analysis.</p></div>
+    <div class="feature"><div class="feature__num">— 06</div><h3 class="feature__title">Bank-grade <em>security</em></h3><p class="feature__body">Two-factor auth, per-user data isolation, PII redaction, and a complete audit trail for every action.</p></div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="s reveal" id="how">
+  <div class="s__head">
+    <div>
+      <div class="s__index">§ 03 — Method</div>
+      <h2 class="s__title">Three steps to <em>clarity</em>.</h2>
+    </div>
+    <p class="s__lede">From signup to insight in minutes. No setup, no manual data entry, no guesswork about which numbers actually matter.</p>
+  </div>
+  <div class="how__rows">
+    <div class="how-row">
+      <div class="how-row__num">i</div>
+      <h3 class="how-row__title">Sign up & pick your industry.</h3>
+      <p class="how-row__body">Create your account, name your organization, choose your industry. KPIConsole calibrates every metric to your business type.</p>
+    </div>
+    <div class="how-row">
+      <div class="how-row__num">ii</div>
+      <h3 class="how-row__title">Upload a bank statement.</h3>
+      <p class="how-row__body">Drop in a PDF or CSV. The AI extracts all transactions in the background — no templates, no mapping, no chasing missing rows.</p>
+    </div>
+    <div class="how-row">
+      <div class="how-row__num">iii</div>
+      <h3 class="how-row__title">Read your dashboard.</h3>
+      <p class="how-row__body">Industry-specific KPIs, trend charts, alerts and a financial-health score. Ask the assistant any follow-up question in plain English.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Industries -->
+<section class="s reveal" id="industries">
+  <div class="s__head">
+    <div>
+      <div class="s__index">§ 04 — Coverage</div>
+      <h2 class="s__title">Built for the <em>real</em> economy.</h2>
+    </div>
+    <p class="s__lede">Twenty-six industry profiles and counting. Each one shapes the KPIs, the AI prompts, the alert thresholds and the report templates.</p>
+  </div>
+  <div class="sectors">
+    {% for sector, items in industry_sectors.items %}
+    <div class="sector">
+      <div class="sector__name">{{ sector }}</div>
+      <div class="sector__items">
+        {% for key, label in items %}
+        <span class="industry"><span class="industry__dot"></span>{{ label }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="sector"><div class="sector__name">Healthcare & Care</div><div class="sector__items"><span class="industry"><span class="industry__dot"></span>Hospitals</span><span class="industry"><span class="industry__dot"></span>Clinics</span><span class="industry"><span class="industry__dot"></span>Pharmacies</span><span class="industry"><span class="industry__dot"></span>Dental practices</span><span class="industry"><span class="industry__dot"></span>Veterinary</span></div></div>
+    <div class="sector"><div class="sector__name">Food & Hospitality</div><div class="sector__items"><span class="industry"><span class="industry__dot"></span>Restaurants</span><span class="industry"><span class="industry__dot"></span>Cafés</span><span class="industry"><span class="industry__dot"></span>Hotels</span><span class="industry"><span class="industry__dot"></span>Catering</span><span class="industry"><span class="industry__dot"></span>Bars & lounges</span></div></div>
+    <div class="sector"><div class="sector__name">Retail & Commerce</div><div class="sector__items"><span class="industry"><span class="industry__dot"></span>Boutiques</span><span class="industry"><span class="industry__dot"></span>Supermarkets</span><span class="industry"><span class="industry__dot"></span>E-commerce</span><span class="industry"><span class="industry__dot"></span>Wholesalers</span></div></div>
+    <div class="sector"><div class="sector__name">Education & Services</div><div class="sector__items"><span class="industry"><span class="industry__dot"></span>Schools</span><span class="industry"><span class="industry__dot"></span>Universities</span><span class="industry"><span class="industry__dot"></span>NGOs</span><span class="industry"><span class="industry__dot"></span>Consultancies</span><span class="industry"><span class="industry__dot"></span>Law firms</span></div></div>
+    <div class="sector"><div class="sector__name">Industry & Logistics</div><div class="sector__items"><span class="industry"><span class="industry__dot"></span>Manufacturing</span><span class="industry"><span class="industry__dot"></span>Construction</span><span class="industry"><span class="industry__dot"></span>Logistics</span><span class="industry"><span class="industry__dot"></span>Agriculture</span><span class="industry"><span class="industry__dot"></span>Transport</span></div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta reveal">
+  <canvas id="ctaCanvas"></canvas>
+  <div class="cta__inner">
+    <div class="cta__eyebrow">— get started today —</div>
+    <h2 class="cta__title">Your industry. Your numbers.<br><em>Your edge.</em></h2>
+    <p class="cta__sub">Join finance teams across healthcare, retail, education and more — all using KPIConsole to make sharper decisions.</p>
+    <a href="/register/" class="btn btn--primary btn--lg">Create your free account →</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="foot">
+  <div>© 2026 KPICONSOLE — financial intelligence</div>
+  <div class="foot__center">v.4.2 · built for the real economy</div>
+  <div class="foot__right"><a href="/login/">Sign in</a><a href="/register/">Sign up</a></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+/* ── Brand mark cube ─────────────────────────────────────── */
+(function(){
+  var host=document.getElementById('navMark');
+  if(!host||!window.THREE)return;
+  var r=new THREE.WebGLRenderer({alpha:true,antialias:true});
+  r.setPixelRatio(Math.min(window.devicePixelRatio,2));r.setSize(30,30,false);r.setClearColor(0,0);
+  host.appendChild(r.domElement);
+  var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);
+  camera.position.set(2.4,2.0,3.6);camera.lookAt(0,0,0);
+  var geo=new THREE.BoxGeometry(1.2,1.2,1.2);
+  var grp=new THREE.Group();
+  grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x1A4D3E})));
+  grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.85})));
+  var inner=new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42),new THREE.MeshBasicMaterial({color:0xA7E8CA}));
+  grp.add(inner);scene.add(grp);
+  var t=0;
+  (function tick(){t+=.008;grp.rotation.x=t*.6;grp.rotation.y=t*.9;inner.rotation.x=-t*1.4;inner.rotation.y=-t*1.1;r.render(scene,camera);requestAnimationFrame(tick)})();
+})();
+
+/* ── Hero stage ─────────────────────────────────────────── */
+(function(){
+  var host=document.getElementById('heroStage');
+  if(!host||!window.THREE)return;
+  var W=function(){return host.clientWidth},H=function(){return host.clientHeight};
+  var renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.setSize(W(),H(),false);renderer.setClearColor(0,0);
+  host.appendChild(renderer.domElement);
+  var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,W()/H(),.1,100);
+  camera.position.set(0,0,11);
+
+  var knot=new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(2.6,.65,220,24,2,3)),
+    new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.45})
+  );
+  scene.add(knot);
+
+  var accentKnot=new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(2.0,.32,160,18,2,5)),
+    new THREE.LineBasicMaterial({color:0xA7E8CA,transparent:true,opacity:.75})
+  );
+  scene.add(accentKnot);
+
+  var cubes=[];
+  for(var i=0;i<14;i++){
+    var s=.10+Math.random()*.12;
+    var mesh=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),new THREE.MeshBasicMaterial({color:i%4===0?0xA7E8CA:0x1A4D3E}));
+    var rr=4.0+Math.random()*1.8,a=Math.random()*Math.PI*2,y=(Math.random()-.5)*4;
+    mesh.userData={r:rr,a:a,y:y,speed:.0015+Math.random()*.002};
+    scene.add(mesh);cubes.push(mesh);
+  }
+
+  var ring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.TorusGeometry(4.6,.005,6,200)),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.15}));
+  ring.rotation.x=Math.PI/2.2;scene.add(ring);
+
+  var COUNT=600,pos=new Float32Array(COUNT*3);
+  for(var i=0;i<COUNT;i++){pos[i*3]=(Math.random()-.5)*18;pos[i*3+1]=(Math.random()-.5)*12;pos[i*3+2]=(Math.random()-.5)*10-4}
+  var dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  var dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0x7BD3AE,size:.022,transparent:true,opacity:.3,sizeAttenuation:true}));
+  scene.add(dots);
+
+  var mx=0,my=0;
+  window.addEventListener('mousemove',function(e){mx=(e.clientX/window.innerWidth-.5)*2;my=(e.clientY/window.innerHeight-.5)*2});
+  window.addEventListener('resize',function(){renderer.setSize(W(),H(),false);camera.aspect=W()/H();camera.updateProjectionMatrix()});
+
+  var t=0;
+  (function tick(){
+    t+=.0045;
+    knot.rotation.x=t*.4+my*.15;knot.rotation.y=t*.6+mx*.25;
+    accentKnot.rotation.x=-t*.55;accentKnot.rotation.y=t*.7;
+    ring.rotation.z=t*.4;
+    cubes.forEach(function(c){
+      c.userData.a+=c.userData.speed;
+      c.position.set(Math.cos(c.userData.a)*c.userData.r,c.userData.y+Math.sin(t*.8+c.userData.a*2)*.3,Math.sin(c.userData.a)*c.userData.r);
+      c.rotation.x=t*1.5;c.rotation.y=t*1.0;
+    });
+    dots.rotation.y=t*.08;
+    camera.position.x=mx*.6;camera.position.y=-my*.4;camera.lookAt(0,0,0);
+    renderer.render(scene,camera);requestAnimationFrame(tick);
+  })();
+})();
+
+/* ── CTA ambient field ───────────────────────────────────── */
+(function(){
+  var cv=document.getElementById('ctaCanvas');
+  if(!cv||!window.THREE)return;
+  var W=function(){return cv.clientWidth},H=function(){return cv.clientHeight};
+  var renderer=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.setSize(W(),H(),false);renderer.setClearColor(0,0);
+  var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(60,W()/H(),.1,200);
+  camera.position.set(0,0,30);
+  var COUNT=1800,pPos=new Float32Array(COUNT*3);
+  for(var i=0;i<COUNT;i++){pPos[i*3]=(Math.random()-.5)*120;pPos[i*3+1]=(Math.random()-.5)*80;pPos[i*3+2]=(Math.random()-.5)*60-10}
+  var pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+  var pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x7BD3AE,size:.06,transparent:true,opacity:.35,sizeAttenuation:true}));
+  scene.add(pts);
+  var ring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(8,1.6,160,14,3,4)),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.25}));
+  ring.position.set(0,0,-8);scene.add(ring);
+  window.addEventListener('resize',function(){renderer.setSize(W(),H(),false);camera.aspect=W()/H();camera.updateProjectionMatrix()});
+  var t=0;
+  (function tick(){t+=.003;pts.rotation.y=t*.08;ring.rotation.x=t*.4;ring.rotation.y=t*.6;renderer.render(scene,camera);requestAnimationFrame(tick)})();
+})();
+
+/* ── Word swap ───────────────────────────────────────────── */
+(function(){
+  var el=document.getElementById('swap');if(!el)return;
+  var words=['industry','hospital','restaurant','school','retailer','startup','NGO'];
+  var i=0;
+  setInterval(function(){
+    i=(i+1)%words.length;
+    el.style.opacity='0';el.style.transform='translateY(6px)';
+    setTimeout(function(){el.textContent=words[i];el.style.transition='opacity 320ms ease,transform 320ms ease';el.style.opacity='1';el.style.transform='none'},240);
+  },2400);
+})();
+
+/* ── Nav scroll ─────────────────────────────────────────── */
+window.addEventListener('scroll',function(){document.getElementById('nav').classList.toggle('is-scrolled',window.scrollY>30)});
+
+/* ── Reveal on scroll ────────────────────────────────────── */
+var io=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('is-in')})},{threshold:.08});
+document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
+</script>
+</body>
+</html>

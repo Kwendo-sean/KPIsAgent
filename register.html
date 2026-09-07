@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account | KPIConsole</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #050E0A;
+  --paper:    #0A1A13;
+  --ink:      #E8F2EE;
+  --ink-2:    #A0AFA8;
+  --muted:    #7A9B8C;
+  --subtle:   #4A6658;
+  --line:     rgba(255,255,255,0.07);
+  --line-2:   rgba(255,255,255,0.13);
+  --accent:   #7BD3AE;
+  --accent-2: #A7E8CA;
+  --accent-soft:rgba(123,211,174,0.12);
+  --error:    #F87171;
+  --error-bg: rgba(248,113,113,0.10);
+  --error-line:rgba(248,113,113,0.25);
+  --font-display:"Instrument Serif","Times New Roman",serif;
+  --font-body:"Inter",system-ui,-apple-system,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --radius:14px;--radius-s:10px;--radius-pill:999px;
+}
+html,body{min-height:100%;font-family:var(--font-body);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+canvas{display:block}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.auth{min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr;background:var(--bg)}
+.auth__left{position:relative;padding:36px 48px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--line);overflow:hidden;background:#040C07}
+.auth__right{padding:36px 56px;display:flex;flex-direction:column;justify-content:center;background:var(--paper)}
+.auth__form{width:100%;max-width:480px;margin:0 auto}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.auth__topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:48px}
+.auth__topbar a{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);transition:color 160ms ease}
+.auth__topbar a:hover{color:var(--ink)}
+.kpi-mark{display:inline-flex;align-items:center;gap:12px;color:var(--ink)}
+.kpi-mark__cube{position:relative;width:30px;height:30px}
+.kpi-mark__cube canvas{width:100%!important;height:100%!important;display:block}
+.kpi-mark__name{font-family:var(--font-display);font-size:1.25rem;font-weight:400;letter-spacing:-.02em;line-height:1}
+.kpi-mark__name em{font-style:italic;color:var(--accent)}
+
+/* ── Auth stage (3D panel) ──────────────────────────────── */
+.auth-stage{position:absolute;inset:0;z-index:0}
+.auth-stage canvas{width:100%!important;height:100%!important}
+
+/* ── Overlay text ───────────────────────────────────────── */
+.auth__overlay{position:relative;z-index:2;margin-top:auto;max-width:460px}
+.eyebrow{font-family:var(--font-mono);font-size:.70rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--accent);opacity:.7;display:inline-block}
+.auth__overlay h2{font-family:var(--font-display);font-weight:400;font-size:clamp(2rem,3.6vw,3rem);line-height:1.05;letter-spacing:-.02em;color:var(--ink);margin:16px 0 12px}
+.auth__overlay h2 em{font-style:italic;color:var(--accent)}
+.auth__overlay p{color:var(--muted);font-size:.96rem;line-height:1.6;max-width:380px}
+.auth__meta{margin-top:36px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;font-family:var(--font-mono);font-size:.72rem;color:var(--muted);letter-spacing:.04em}
+.auth__meta strong{display:block;font-family:var(--font-display);font-weight:400;font-size:1.5rem;letter-spacing:-.02em;color:var(--ink);margin-bottom:4px}
+
+/* ── Progress strip ─────────────────────────────────────── */
+.progress{display:flex;align-items:center;gap:14px;margin-bottom:32px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.10em;text-transform:uppercase;color:var(--muted)}
+.progress__num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--line-2);background:transparent;font-size:.70rem;color:var(--muted);transition:all 200ms ease}
+.progress__num.is-active{background:var(--accent);color:#061A0F;border-color:var(--accent)}
+.progress__num.is-done{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.progress__line{flex:1;height:1px;background:var(--line-2);transition:background 220ms ease}
+.progress__line.is-done{background:var(--accent)}
+
+/* ── Form titles ────────────────────────────────────────── */
+.form-title{font-family:var(--font-display);font-weight:400;font-size:clamp(2rem,3vw,2.5rem);letter-spacing:-.02em;line-height:1.05;color:var(--ink);margin-bottom:8px}
+.form-title em{font-style:italic;color:var(--accent)}
+.form-sub{font-size:.95rem;color:var(--muted);line-height:1.6;margin-bottom:36px}
+
+/* ── Fields ─────────────────────────────────────────────── */
+.fields-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.fields-row .field{margin-bottom:0}
+.field{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.field__label{font-family:var(--font-mono);font-size:.68rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.field__label .req{color:var(--accent)}
+.field__input,.field input[type="text"],.field input[type="email"],.field input[type="password"],.field input[type="tel"],.field select{
+  width:100%;padding:14px 0;font:inherit;font-family:var(--font-body);font-size:.96rem;color:var(--ink);
+  background:transparent;border:0;border-bottom:1px solid var(--line-2);border-radius:0;outline:none;
+  transition:border-color 180ms ease;
+}
+.field__input::placeholder,.field input::placeholder{color:var(--subtle)}
+.field__input:focus,.field input:focus,.field select:focus{border-bottom-color:var(--accent)}
+.field--has-error .field__input,.field--has-error input{border-bottom-color:var(--error)}
+.field__error{font-size:.80rem;color:var(--error);display:flex;align-items:center;gap:6px}
+.field__inputrow{position:relative;display:flex;align-items:center}
+.field__inputrow .field__input{padding-right:56px}
+.field__toggle{position:absolute;right:4px;background:none;border:0;color:var(--muted);cursor:pointer;padding:6px 8px;font-size:.85rem;font-family:var(--font-mono);letter-spacing:.08em;transition:color 150ms ease}
+.field__toggle:hover{color:var(--ink)}
+.field select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%237A9B8C' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 4px center;background-size:12px 8px;padding-right:26px}
+.field select option{background:#0A1A13;color:var(--ink)}
+
+/* ── Banner ─────────────────────────────────────────────── */
+.banner{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--error-bg);border:1px solid var(--error-line);border-radius:var(--radius-s);color:var(--error);font-size:.88rem;margin-bottom:22px}
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.92rem;font-weight:500;cursor:pointer;border:1px solid transparent;transition:transform 180ms ease,background 200ms ease,color 200ms ease,border-color 200ms ease;text-decoration:none;white-space:nowrap}
+.btn--primary{background:var(--accent);color:#061A0F;font-weight:600}
+.btn--primary:hover{background:var(--accent-2);transform:translateY(-1px)}
+.btn--soft{background:transparent;color:var(--muted);border-color:var(--line-2)}
+.btn--soft:hover{border-color:var(--accent);color:var(--ink)}
+.btn--lg{padding:17px 30px;font-size:.96rem}
+.btn--full{width:100%}
+
+/* ── Form footer ────────────────────────────────────────── */
+.form-foot{margin-top:28px;padding-top:22px;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted);text-align:center}
+.form-foot a{color:var(--ink);font-weight:500;border-bottom:1px solid var(--line-2)}
+.form-foot a:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media(max-width:960px){
+  .auth{grid-template-columns:1fr}
+  .auth__left{border-right:0;border-bottom:1px solid var(--line);padding:28px 24px 40px;min-height:300px}
+  .auth__right{padding:36px 24px}
+  .auth__overlay h2{font-size:2rem}
+  .auth__meta{grid-template-columns:repeat(3,1fr);gap:12px}
+  .fields-row{grid-template-columns:1fr;gap:0}
+}
+@media(max-width:520px){.auth__right{padding:28px 20px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-step1-error="{% if errors.username or errors.email or errors.password or errors.password2 %}true{% else %}false{% endif %}" data-step2-error="{% if errors.organization_name %}true{% else %}false{% endif %}">
+<div class="auth">
+
+  <!-- LEFT — brand + 3D stage -->
+  <div class="auth__left">
+    <div class="auth__topbar">
+      <a href="/" class="kpi-mark">
+        <span class="kpi-mark__cube" id="brandMark"></span>
+        <span class="kpi-mark__name">KPI<em>Console</em></span>
+      </a>
+      <a href="/">← Back to home</a>
+    </div>
+
+    <div class="auth-stage" id="stage"></div>
+
+    <div class="auth__overlay">
+      <div class="eyebrow" style="margin-bottom:18px">— Industry-aware intelligence</div>
+      <h2>Financial clarity,<br>for <em>your</em> industry.</h2>
+      <p>Tell us your industry once — and KPIConsole calibrates every KPI, alert and AI prompt to the way your business actually operates.</p>
+      <div class="auth__meta">
+        <div><strong>26+</strong>industry profiles</div>
+        <div><strong>AI-trained</strong>on your sector</div>
+        <div><strong>Multi-account</strong>workspaces</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT — form -->
+  <div class="auth__right">
+    <div class="auth__form">
+
+      <!-- Progress -->
+      <div class="progress">
+        <div class="progress__num is-active" id="dot1">1</div>
+        <div class="progress__line" id="line1"></div>
+        <div class="progress__num" id="dot2">2</div>
+        <span style="margin-left:8px" id="stepLabel">Step 1 of 2 — Account</span>
+      </div>
+
+      <form method="POST" action="{% url 'register' %}" id="regForm" novalidate>
+        {% csrf_token %}
+
+        <!-- Step 1 -->
+        <div id="step1">
+          <h1 class="form-title">Create <em>account</em>.</h1>
+          <p class="form-sub">Start with your personal details. Takes about a minute.</p>
+
+          <div class="fields-row" style="margin-bottom:18px">
+            <div class="field">
+              <label class="field__label" for="first_name">First name</label>
+              <input type="text" id="first_name" name="first_name" class="field__input" placeholder="Jane" value="{{ form_data.first_name|default:'' }}" autocomplete="given-name">
+            </div>
+            <div class="field">
+              <label class="field__label" for="last_name">Last name</label>
+              <input type="text" id="last_name" name="last_name" class="field__input" placeholder="Doe" value="{{ form_data.last_name|default:'' }}" autocomplete="family-name">
+            </div>
+          </div>
+
+          <div class="field {% if errors.username %}field--has-error{% endif %}">
+            <label class="field__label" for="username">Username <span class="req">*</span></label>
+            <input type="text" id="username" name="username" class="field__input" placeholder="janedoe" value="{{ form_data.username|default:'' }}" autocomplete="username" autofocus required>
+            {% if errors.username %}<div class="field__error"><i class="fas fa-circle-exclamation"></i>{{ errors.username }}</div>{% endif %}
+          </div>
+
+          <div class="field {% if errors.email %}field--has-error{% endif %}">
+            <label class="field__label" for="email">Email <span class="req">*</span></label>
+            <input type="email" id="email" name="email" class="field__input" placeholder="jane@example.com" value="{{ form_data.email|default:'' }}" autocomplete="email" required>
+            {% if errors.email %}<div class="field__error"><i class="fas fa-circle-exclamation"></i>{{ errors.email }}</div>{% endif %}
+          </div>
+
+          <div class="field {% if errors.password %}field--has-error{% endif %}">
+            <label class="field__label" for="password">Password <span class="req">*</span></label>
+            <div class="field__inputrow">
+              <input type="password" id="password" name="password" class="field__input" placeholder="Minimum 8 characters" autocomplete="new-password" required>
+              <button type="button" class="field__toggle" id="pwToggle" tabindex="-1">SHOW</button>
+            </div>
+            {% if errors.password %}<div class="field__error"><i class="fas fa-circle-exclamation"></i>{{ errors.password }}</div>{% endif %}
+          </div>
+
+          <div class="field {% if errors.password2 %}field--has-error{% endif %}">
+            <label class="field__label" for="password2">Confirm password <span class="req">*</span></label>
+            <input type="password" id="password2" name="password2" class="field__input" placeholder="Re-enter password" autocomplete="new-password" required>
+            {% if errors.password2 %}<div class="field__error"><i class="fas fa-circle-exclamation"></i>{{ errors.password2 }}</div>{% endif %}
+          </div>
+
+          <button type="button" class="btn btn--primary btn--full btn--lg" id="nextBtn" style="margin-top:14px">
+            Continue to organization →
+          </button>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="step2" style="display:none">
+          <h1 class="form-title">Your <em>organization</em>.</h1>
+          <p class="form-sub">This is what calibrates your KPIs and the AI's industry context.</p>
+
+          <div class="field {% if errors.organization_name %}field--has-error{% endif %}">
+            <label class="field__label" for="organization_name">Organization name <span class="req">*</span></label>
+            <input type="text" id="organization_name" name="organization_name" class="field__input" placeholder="e.g. Sunrise Hospital, Mama Ntilie Restaurant" value="{{ form_data.organization_name|default:'' }}" required>
+            {% if errors.organization_name %}<div class="field__error"><i class="fas fa-circle-exclamation"></i>{{ errors.organization_name }}</div>{% endif %}
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="industry">Industry <span class="req">*</span></label>
+            <select id="industry" name="industry">
+              {% for sector, items in industry_sectors.items %}
+              <optgroup label="{{ sector }}">
+                {% for key, label in items %}
+                <option value="{{ key }}" {% if form_data.industry == key %}selected{% elif not form_data.industry and key == 'HOSPITAL' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </optgroup>
+              {% empty %}
+              <optgroup label="Healthcare">
+                <option value="HOSPITAL">Hospital</option>
+                <option value="CLINIC">Clinic</option>
+                <option value="PHARMACY">Pharmacy</option>
+              </optgroup>
+              <optgroup label="Hospitality">
+                <option value="RESTAURANT">Restaurant</option>
+                <option value="HOTEL">Hotel</option>
+              </optgroup>
+              <optgroup label="Retail">
+                <option value="RETAIL">Retail store</option>
+                <option value="ECOMMERCE">E-commerce</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="OTHER">Other</option>
+              </optgroup>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="fields-row" style="margin-bottom:18px">
+            <div class="field">
+              <label class="field__label" for="role">Your role</label>
+              <select id="role" name="role">
+                <option value="OWNER" {% if form_data.role == 'OWNER' %}selected{% endif %}>Business owner</option>
+                <option value="DIRECTOR" {% if form_data.role == 'DIRECTOR' %}selected{% endif %}>Director / CEO</option>
+                <option value="CFO" {% if form_data.role == 'CFO' %}selected{% endif %}>Chief Financial Officer</option>
+                <option value="MANAGER" {% if form_data.role == 'MANAGER' or not form_data.role %}selected{% endif %}>Finance manager</option>
+                <option value="ANALYST" {% if form_data.role == 'ANALYST' %}selected{% endif %}>Financial analyst</option>
+                <option value="ACCOUNTANT" {% if form_data.role == 'ACCOUNTANT' %}selected{% endif %}>Accountant</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone" class="field__input" placeholder="+254 7XX XXX XXX" value="{{ form_data.phone|default:'' }}" autocomplete="tel">
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:14px">
+            <button type="button" class="btn btn--soft" id="backBtn">← Back</button>
+            <button type="submit" class="btn btn--primary btn--lg" style="flex:1">Create account →</button>
+          </div>
+        </div>
+
+      </form>
+
+      <div class="form-foot">
+        Already have an account? <a href="{% url 'login' %}">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+/* ── Brand mark cube ─────────────────────────────────────── */
+(function(){
+  var host=document.getElementById('brandMark');
+  if(!host||!window.THREE)return;
+  var r=new THREE.WebGLRenderer({alpha:true,antialias:true});
+  r.setPixelRatio(Math.min(window.devicePixelRatio,2));r.setSize(30,30,false);r.setClearColor(0,0);
+  host.appendChild(r.domElement);
+  var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);
+  camera.position.set(2.4,2.0,3.6);camera.lookAt(0,0,0);
+  var geo=new THREE.BoxGeometry(1.2,1.2,1.2);
+  var grp=new THREE.Group();
+  grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x1A4D3E})));
+  grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.85})));
+  var inner=new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42),new THREE.MeshBasicMaterial({color:0xA7E8CA}));
+  grp.add(inner);scene.add(grp);
+  var t=0;
+  (function tick(){t+=.008;grp.rotation.x=t*.6;grp.rotation.y=t*.9;inner.rotation.x=-t*1.4;inner.rotation.y=-t*1.1;r.render(scene,camera);requestAnimationFrame(tick)})();
+})();
+
+/* ── Auth stage (icosahedron) ────────────────────────────── */
+(function(){
+  var host=document.getElementById('stage');
+  if(!host||!window.THREE)return;
+  var get=function(){return{w:host.clientWidth,h:host.clientHeight}};
+  var d=get(),w=d.w,h=d.h;
+  var renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.setSize(w,h,false);renderer.setClearColor(0,0);
+  host.appendChild(renderer.domElement);
+  var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(40,w/h,.1,100);
+  camera.position.set(0,0,9);
+
+  var outer=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(2.6,1)),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.40}));
+  var mid=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.7,0)),new THREE.LineBasicMaterial({color:0xA7E8CA,transparent:true,opacity:.55}));
+  var inner=new THREE.Mesh(new THREE.IcosahedronGeometry(.5,0),new THREE.MeshBasicMaterial({color:0x1A4D3E}));
+  var grp=new THREE.Group();grp.add(outer);grp.add(mid);grp.add(inner);scene.add(grp);
+
+  var COUNT=220,pos=new Float32Array(COUNT*3);
+  for(var i=0;i<COUNT;i++){var rr=4+Math.random()*3.5,tt=Math.random()*Math.PI*2,pp=(Math.random()-.5)*Math.PI;pos[i*3]=rr*Math.cos(tt)*Math.cos(pp);pos[i*3+1]=rr*Math.sin(pp)*.8;pos[i*3+2]=rr*Math.sin(tt)*Math.cos(pp)-4}
+  var dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  var dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0x7BD3AE,size:.025,transparent:true,opacity:.40,sizeAttenuation:true}));
+  scene.add(dots);
+
+  var mx=0,my=0;
+  host.addEventListener('mousemove',function(e){var rc=host.getBoundingClientRect();mx=((e.clientX-rc.left)/rc.width-.5)*2;my=((e.clientY-rc.top)/rc.height-.5)*2});
+  window.addEventListener('resize',function(){var d2=get();renderer.setSize(d2.w,d2.h,false);camera.aspect=d2.w/d2.h;camera.updateProjectionMatrix()});
+
+  var t=0;
+  (function tick(){
+    t+=.0035;
+    grp.rotation.x=t*.8+my*.18;grp.rotation.y=t*1.0+mx*.25;
+    mid.rotation.x=-t*1.1;mid.rotation.z=t*.9;
+    inner.rotation.y=t*2.0;dots.rotation.y=t*.2;
+    renderer.render(scene,camera);requestAnimationFrame(tick);
+  })();
+})();
+
+/* ── Password toggle ─────────────────────────────────────── */
+var pw=document.getElementById('password');
+var tog=document.getElementById('pwToggle');
+tog.addEventListener('click',function(){var show=pw.type==='password';pw.type=show?'text':'password';tog.textContent=show?'HIDE':'SHOW'});
+
+/* ── Step logic ─────────────────────────────────────────── */
+var step1=document.getElementById('step1');
+var step2=document.getElementById('step2');
+var dot1=document.getElementById('dot1');
+var dot2=document.getElementById('dot2');
+var line1=document.getElementById('line1');
+var stepLabel=document.getElementById('stepLabel');
+
+function go2(){
+  var u=document.getElementById('username'),e=document.getElementById('email'),p=document.getElementById('password'),p2=document.getElementById('password2');
+  var ok=true;
+  [u,e,p,p2].forEach(function(f){var wrap=f.closest('.field');if(wrap)wrap.classList.remove('field--has-error')});
+  if(!u.value.trim()){u.closest('.field').classList.add('field--has-error');ok=false}
+  if(!e.value.trim()||!e.value.includes('@')){e.closest('.field').classList.add('field--has-error');ok=false}
+  if(p.value.length<8){p.closest('.field').classList.add('field--has-error');ok=false}
+  if(p.value!==p2.value){p2.closest('.field').classList.add('field--has-error');ok=false}
+  if(!ok)return;
+  step1.style.display='none';step2.style.display='block';
+  dot1.classList.remove('is-active');dot1.classList.add('is-done');
+  dot2.classList.add('is-active');line1.classList.add('is-done');
+  stepLabel.textContent='Step 2 of 2 — Organization';
+  window.scrollTo(0,0);
+}
+function go1(){
+  step2.style.display='none';step1.style.display='block';
+  dot2.classList.remove('is-active');dot1.classList.remove('is-done');dot1.classList.add('is-active');
+  line1.classList.remove('is-done');stepLabel.textContent='Step 1 of 2 — Account';
+  window.scrollTo(0,0);
+}
+document.getElementById('nextBtn').addEventListener('click',go2);
+document.getElementById('backBtn').addEventListener('click',go1);
+
+/* Server-side step routing */
+var hasStep2Error=document.body.dataset.step2Error==='true';
+var hasStep1Error=document.body.dataset.step1Error==='true';
+if(hasStep2Error&&!hasStep1Error){
+  step1.style.display='none';step2.style.display='block';
+  dot1.classList.remove('is-active');dot1.classList.add('is-done');
+  dot2.classList.add('is-active');line1.classList.add('is-done');
+  stepLabel.textContent='Step 2 of 2 — Organization';
+}
+</script>
+</body>
+</html>

@@ -1009,7 +1009,59 @@
 				<div class="brand-icon" aria-hidden="true">KPI</div>
 				<div>
 					<div class="brand-name">KPI<span>Console</span></div>
-					<div class="brand-tagline">Hospital Financial Intelligence</div>
+					<div class="brand-tagline">{{ active_industry_label|default:"Financial Intelligence" }}</div>
+				</div>
+			</div>
+
+			<!-- Account Switcher -->
+			<div style="padding:8px 10px 4px;margin:0 0 2px">
+				<div style="position:relative" id="acctSwitcherWrap">
+					<button type="button" id="acctSwitcherBtn"
+						style="width:100%;padding:8px 10px;border-radius:8px;background:var(--surface-alt);border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text);font:inherit;font-size:12.5px;font-weight:500;transition:background .12s;text-align:left"
+						onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface-alt)'">
+						<span style="width:22px;height:22px;border-radius:6px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;font-weight:700;flex-shrink:0">
+							{% if active_sub_account %}{{ active_sub_account.name|slice:":1"|upper }}{% else %}{{ user.username|slice:":1"|upper }}{% endif %}
+						</span>
+						<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ active_org_name }}</span>
+						<i class="fas fa-chevron-down" style="color:var(--muted);font-size:.65rem;flex-shrink:0" id="acctArrow"></i>
+					</button>
+					<!-- Dropdown -->
+					<div id="acctDropdown"
+						style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.15);overflow:hidden">
+						<!-- Primary account -->
+						<form method="POST" action="{% url 'switch_account' %}" style="display:block">
+							{% csrf_token %}
+							<input type="hidden" name="sub_id" value="primary">
+							<input type="hidden" name="next" value="{{ request.path }}">
+							<button type="submit" style="width:100%;padding:9px 12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:9px;font:inherit;font-size:.82rem;color:var(--text);transition:background .1s;text-align:left"
+								onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='none'">
+								<span style="width:20px;height:20px;border-radius:5px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:700;flex-shrink:0">{{ user.username|slice:":1"|upper }}</span>
+								<span style="flex:1;overflow:hidden;text-overflow:ellipsis">{% with user.userprofile.organization_name as on %}{% if on %}{{ on }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}{% endwith %}</span>
+								{% if not active_sub_account %}<i class="fas fa-check" style="color:var(--green);font-size:.65rem"></i>{% endif %}
+							</button>
+						</form>
+						{% if sub_accounts %}
+						<div style="height:1px;background:var(--line);margin:2px 0"></div>
+						{% for sub in sub_accounts %}
+						<form method="POST" action="{% url 'switch_account' %}" style="display:block">
+							{% csrf_token %}
+							<input type="hidden" name="sub_id" value="{{ sub.id }}">
+							<input type="hidden" name="next" value="{{ request.path }}">
+							<button type="submit" style="width:100%;padding:9px 12px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:9px;font:inherit;font-size:.82rem;color:var(--text);transition:background .1s;text-align:left"
+								onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='none'">
+								<span style="width:20px;height:20px;border-radius:5px;background:var(--green-2,#143E32);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.6rem;font-weight:700;flex-shrink:0">{{ sub.name|slice:":1"|upper }}</span>
+								<span style="flex:1;overflow:hidden;text-overflow:ellipsis">{{ sub.name }}</span>
+								{% if active_sub_account.id == sub.id %}<i class="fas fa-check" style="color:var(--green);font-size:.65rem"></i>{% endif %}
+							</button>
+						</form>
+						{% endfor %}
+						{% endif %}
+						<div style="height:1px;background:var(--line);margin:2px 0"></div>
+						<a href="{% url 'accounts' %}" style="display:flex;align-items:center;gap:9px;padding:9px 12px;font-size:.82rem;color:var(--muted);transition:background .1s"
+							onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='none'">
+							<i class="fas fa-plus-circle" style="font-size:.75rem;color:var(--green)"></i> Manage accounts
+						</a>
+					</div>
 				</div>
 			</div>
 
@@ -1037,6 +1089,10 @@
 			</a>
 
 			<div class="sidebar-section-label">Account</div>
+			<a href="{% url 'accounts' %}" class="nav-link {% if active_page == 'accounts' %}is-active{% endif %}">
+				<span class="nav-link-inner"><i class="fas fa-users" aria-hidden="true"></i> Linked Accounts</span>
+				{% if sub_accounts %}<span class="nav-badge">{{ sub_accounts|length }}</span>{% endif %}
+			</a>
 			<a href="{% url 'audit_log' %}" class="nav-link {% if active_page == 'audit' %}is-active{% endif %}" aria-current="{% if active_page == 'audit' %}page{% endif %}">
 				<span class="nav-link-inner"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Audit Log</span>
 			</a>
@@ -1363,6 +1419,24 @@
 			overlay.addEventListener('click', closeNav);
 			sidebar.querySelectorAll('.nav-link').forEach(link => {
 				link.addEventListener('click', () => { if (window.innerWidth <= 1060) closeNav(); });
+			});
+		})();
+
+		/* ─── Account Switcher Dropdown ───────────────────────── */
+		(function() {
+			const btn      = document.getElementById('acctSwitcherBtn');
+			const dropdown = document.getElementById('acctDropdown');
+			const arrow    = document.getElementById('acctArrow');
+			if (!btn || !dropdown) return;
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				const open = dropdown.style.display === 'block';
+				dropdown.style.display = open ? 'none' : 'block';
+				arrow.style.transform  = open ? '' : 'rotate(180deg)';
+			});
+			document.addEventListener('click', () => {
+				dropdown.style.display = 'none';
+				arrow.style.transform  = '';
 			});
 		})();
 

@@ -19,6 +19,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import get_template, render_to_string
 from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status as drf_status
@@ -33,10 +34,13 @@ from xhtml2pdf import pisa
 from .models import (
     BankStatement, KPIMetric, AIAnalysis, FinancialTransaction,
     UserProfile, AuditLog, BudgetTarget, StatementTag, StatementTagging,
-    TwoFactorProfile,
+    TwoFactorProfile, SubAccount,
 )
 from .pdf_extractor import BankStatementPDFExtractor, PDFPasswordRequired, PDFWrongPassword
 from .ai_agent import HospitalKPIAgent
+from .industry_config import (
+    INDUSTRY_CHOICES, INDUSTRY_SECTORS, get_industry_label, get_ai_context,
+)
 
 logger = logging.getLogger("kpi.views")
 
@@ -68,35 +72,86 @@ def _audit(request, action: str, detail: str = "", user=None):
 CURRENCY_SYMBOL = "KES"
 
 
+def _active_account(request):
+    """Return (sub_account_or_None, industry_key) for the current session."""
+    sub_id = request.session.get("active_sub_account_id")
+    if sub_id:
+        try:
+            sub = SubAccount.objects.get(pk=sub_id, owner=request.user, is_active=True)
+            return sub, sub.industry
+        except SubAccount.DoesNotExist:
+            request.session.pop("active_sub_account_id", None)
+    industry = "HOSPITAL"
+    try:
+        industry = request.user.userprofile.industry or "HOSPITAL"
+    except Exception:
+        pass
+    return None, industry
+
+
+def _account_qs(request):
+    """Return a BankStatement queryset filtered to the active account."""
+    sub, _ = _active_account(request)
+    if sub:
+        return BankStatement.objects.filter(uploaded_by=request.user, sub_account=sub)
+    return BankStatement.objects.filter(uploaded_by=request.user, sub_account__isnull=True)
+
+
 def _base_context(request):
-    """Return sidebar counts used on every page."""
-    total = BankStatement.objects.filter(uploaded_by=request.user).count()
-    processed = BankStatement.objects.filter(uploaded_by=request.user, is_processed=True).count()
+    """Return sidebar counts and account context used on every page."""
+    qs = _account_qs(request)
+    total = qs.count()
+    processed = qs.filter(is_processed=True).count()
+    sub, industry = _active_account(request)
+    sub_accounts = list(SubAccount.objects.filter(owner=request.user, is_active=True))
+    org_name = ""
+    try:
+        org_name = sub.name if sub else (request.user.userprofile.organization_name or request.user.get_full_name() or request.user.username)
+    except Exception:
+        org_name = request.user.get_full_name() or request.user.username
     return {
         "total_statements": total,
         "processed_statements": processed,
         "currency_symbol": CURRENCY_SYMBOL,
+        "active_sub_account": sub,
+        "active_industry": industry,
+        "active_industry_label": get_industry_label(industry),
+        "active_org_name": org_name,
+        "sub_accounts": sub_accounts,
     }
+
+
+# ──────────────────────────────────────────────
+# Landing page
+# ──────────────────────────────────────────────
+
+def landing_view(request):
+    """Public landing page — redirect to dashboard if already logged in."""
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    return render(request, "landing.html", {
+        "industry_sectors": INDUSTRY_SECTORS,
+    })
 
 
 # ──────────────────────────────────────────────
 # Auth
 # ──────────────────────────────────────────────
 
+@ratelimit(key='ip', rate='10/m', method='POST', block=False)
 def login_view(request):
     """Manager login page. Redirects to 2FA verification if the user has it enabled."""
     if request.user.is_authenticated:
         return redirect("dashboard")
 
     if request.method == "POST":
+        if getattr(request, 'limited', False):
+            return render(request, "login.html", {"error": "Too many login attempts. Please try again later."})
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            if not (user.is_staff or hasattr(user, "userprofile")):
-                return render(request, "login.html", {"error": "Only managers can access this system."})
-
             # Check if 2FA is enabled for this user
             try:
                 tf = TwoFactorProfile.objects.get(user=user, is_enabled=True)
@@ -117,8 +172,11 @@ def login_view(request):
     return render(request, "login.html")
 
 
+@ratelimit(key='ip', rate='10/m', method='POST', block=False)
 def two_factor_verify_view(request):
     """Second step of login: validate TOTP code or backup code."""
+    if request.method == "POST" and getattr(request, 'limited', False):
+        return render(request, "two_factor_verify.html", {"error": "Too many attempts. Please try again later."})
     import pyotp
 
     user_id = request.session.get("2fa_pending_user")
@@ -177,6 +235,75 @@ def logout_view(request):
     return redirect("login")
 
 
+@ratelimit(key='ip', rate='5/m', method='POST', block=False)
+def register_view(request):
+    """Multi-step signup: create user + industry-aware profile."""
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
+    errors = {}
+    form_data = {}
+
+    if request.method == "POST":
+        if getattr(request, 'limited', False):
+            errors["rate_limit"] = "Too many registration attempts. Please try again later."
+        # Step fields
+        first_name     = request.POST.get("first_name", "").strip()
+        last_name      = request.POST.get("last_name", "").strip()
+        username       = request.POST.get("username", "").strip()
+        email          = request.POST.get("email", "").strip()
+        password       = request.POST.get("password", "")
+        password2      = request.POST.get("password2", "")
+        org_name       = request.POST.get("organization_name", "").strip()
+        industry       = request.POST.get("industry", "HOSPITAL")
+        role           = request.POST.get("role", "MANAGER")
+        phone          = request.POST.get("phone", "").strip()
+
+        form_data = {
+            "first_name": first_name, "last_name": last_name,
+            "username": username, "email": email,
+            "organization_name": org_name, "industry": industry,
+            "role": role, "phone": phone,
+        }
+
+        # Validation
+        if not username:
+            errors["username"] = "Username is required."
+        elif User.objects.filter(username=username).exists():
+            errors["username"] = "This username is already taken."
+        if not email:
+            errors["email"] = "Email is required."
+        elif User.objects.filter(email=email).exists():
+            errors["email"] = "An account with this email already exists."
+        if not password:
+            errors["password"] = "Password is required."
+        elif len(password) < 8:
+            errors["password"] = "Password must be at least 8 characters."
+        elif password != password2:
+            errors["password2"] = "Passwords do not match."
+        if not org_name:
+            errors["organization_name"] = "Organization name is required."
+
+        if not errors:
+            user = User.objects.create_user(
+                username=username, email=email, password=password,
+                first_name=first_name, last_name=last_name,
+            )
+            UserProfile.objects.create(
+                user=user, role=role, industry=industry,
+                organization_name=org_name, phone=phone,
+            )
+            login(request, user)
+            _audit(request, "LOGIN", f"New account registered: {username}", user=user)
+            return redirect("dashboard")
+
+    return render(request, "register.html", {
+        "errors": errors,
+        "form_data": form_data,
+        "industry_sectors": INDUSTRY_SECTORS,
+    })
+
+
 # ──────────────────────────────────────────────
 # Dashboard
 # ──────────────────────────────────────────────
@@ -185,7 +312,7 @@ def logout_view(request):
 def dashboard_view(request):
     """Main KPI dashboard."""
     import re as _re
-    bank_statements = BankStatement.objects.filter(uploaded_by=request.user).order_by("-upload_date")
+    bank_statements = _account_qs(request).order_by("-upload_date")
 
     # ── Filter / scope params ─────────────────────────────────────
     filter_mode         = request.GET.get("filter_mode", "latest")
@@ -694,7 +821,7 @@ def _generate_detailed_summaries(latest_statement, all_statements, summary_type)
 @login_required(login_url="login")
 def statements_view(request):
     """List all bank statements for the current user with optional date/status filters."""
-    bank_statements = BankStatement.objects.filter(uploaded_by=request.user).order_by("-upload_date")
+    bank_statements = _account_qs(request).order_by("-upload_date")
 
     # Date & status filters
     date_from   = request.GET.get("date_from", "").strip()
@@ -920,11 +1047,11 @@ def kpi_comparison(request):
 
     statements = BankStatement.objects.filter(
         uploaded_by=request.user, is_processed=True
-    ).order_by("-statement_period_end")[:limit]
+    ).prefetch_related("kpi_metrics").order_by("-statement_period_end")[:limit]
 
     kpi_comparison_data = {}
     for statement in statements:
-        for kpi in KPIMetric.objects.filter(bank_statement=statement):
+        for kpi in statement.kpi_metrics.all():
             if kpi.metric_name not in kpi_comparison_data:
                 kpi_comparison_data[kpi.metric_name] = []
             kpi_comparison_data[kpi.metric_name].append({
@@ -986,7 +1113,7 @@ def kpi_comparison(request):
 
     efficiency_data = []
     for s in sorted_view_statements:
-        rev_m = KPIMetric.objects.filter(bank_statement=s, metric_name="Total Revenue").first()
+        rev_m = next((k for k in s.kpi_metrics.all() if k.metric_name == "Total Revenue"), None)
         tx_count = s.transactions.count()
         rev_val = float(rev_m.current_value) if rev_m else 0
         efficiency_data.append(round(rev_val / tx_count, 2) if tx_count else 0)
@@ -1119,10 +1246,12 @@ def upload_bank_statement(request):
         if is_pdf and not header.startswith(b"%PDF"):
             return JsonResponse({"success": False, "error": "The uploaded file does not appear to be a valid PDF."}, status=400)
 
+        active_sub, _ = _active_account(request)
         bank_statement = BankStatement.objects.create(
             uploaded_by=request.user,
             file_name=uploaded_file.name,
             file=uploaded_file,
+            sub_account=active_sub,
         )
 
         try:
@@ -1196,8 +1325,6 @@ def upload_bank_statement(request):
                         start_row = i
                         break
                 
-                print(f"DEBUG: Starting CSV parse at row {start_row}")
-
                 for row_idx, row in enumerate(lines[start_row:]):
                     if not row: continue
 
@@ -1250,7 +1377,6 @@ def upload_bank_statement(request):
                             "type": tx_type
                         })
 
-                print(f"DEBUG: Successfully extracted {len(transactions)} CSV transactions.")
                 if not transactions:
                     raise ValueError("AI structured the columns but no valid transaction lines were extracted from the data.")
 
@@ -1330,7 +1456,6 @@ def upload_bank_statement(request):
                     # if not, fall back to OCR which may produce cleaner output
                     test_txns = BankStatementPDFExtractor.parse_mpesa_transactions(extracted_text)
                     if not test_txns and page_images:
-                        print("[UPLOAD] Native text yielded 0 transactions — trying OCR fallback")
                         ocr_text = agent_for_ocr.ocr_pdf_pages(page_images)
                         if ocr_text and len(ocr_text.strip()) > len(extracted_text.strip()):
                             extracted_text = ocr_text
@@ -1722,7 +1847,7 @@ class AskAIView(APIView):
             # Build system-wide context
             all_statements = BankStatement.objects.filter(
                 uploaded_by=request.user, is_processed=True
-            ).order_by("-upload_date")
+            ).prefetch_related("transactions").order_by("-upload_date")
 
             statements_context = []
             all_transactions = []
@@ -1741,7 +1866,7 @@ class AskAIView(APIView):
                     "withdrawals": withdrawals,
                     "closing_balance": float(getattr(s, "closing_balance", 0) or 0),
                 })
-                for tx in FinancialTransaction.objects.filter(bank_statement=s).order_by("-transaction_date")[:50]:
+                for tx in s.transactions.all().order_by("-transaction_date")[:50]:
                     all_transactions.append({
                         "file_name": s.file_name,
                         "date": str(tx.transaction_date),
@@ -1947,10 +2072,6 @@ def download_report_view(request):
         return HttpResponse('We had some errors generating the PDF', status=500)
     _audit(request, "EXPORT", f"PDF report downloaded — {timeframe_label}")
     return response
-
-
-# ──────────────────────────────────────────────
-# CSV / Excel Export
 # ──────────────────────────────────────────────
 
 @login_required(login_url="login")
@@ -2859,3 +2980,70 @@ class KPIListAPI(APIView):
             for k in kpis
         ]
         return Response({"count": len(data), "results": data})
+
+
+# ──────────────────────────────────────────────
+# Sub-Account Management
+# ──────────────────────────────────────────────
+
+@login_required(login_url="login")
+def accounts_view(request):
+    """Manage linked sub-accounts."""
+    sub_accounts = SubAccount.objects.filter(owner=request.user)
+    ctx = _base_context(request)
+    ctx.update({
+        "sub_accounts": sub_accounts,
+        "industry_sectors": INDUSTRY_SECTORS,
+        "active_page": "accounts",
+    })
+    return render(request, "accounts.html", ctx)
+
+
+@login_required(login_url="login")
+@require_POST
+def create_subaccount_view(request):
+    name     = request.POST.get("name", "").strip()
+    industry = request.POST.get("industry", "HOSPITAL")
+    contact_name  = request.POST.get("contact_name", "").strip()
+    contact_email = request.POST.get("contact_email", "").strip()
+
+    if not name:
+        from django.contrib import messages
+        messages.error(request, "Account name is required.")
+        return redirect("accounts")
+
+    SubAccount.objects.create(
+        owner=request.user, name=name, industry=industry,
+        contact_name=contact_name, contact_email=contact_email,
+    )
+    _audit(request, "UPLOAD", f"Created sub-account: {name}")
+    return redirect("accounts")
+
+
+@login_required(login_url="login")
+@require_POST
+def delete_subaccount_view(request, sub_id):
+    sub = SubAccount.objects.filter(pk=sub_id, owner=request.user).first()
+    if sub:
+        if request.session.get("active_sub_account_id") == sub_id:
+            request.session.pop("active_sub_account_id", None)
+        sub.delete()
+    return redirect("accounts")
+
+
+@login_required(login_url="login")
+@require_POST
+def switch_account_view(request):
+    """Switch the active account in session."""
+    sub_id = request.POST.get("sub_id", "primary")
+    if sub_id == "primary":
+        request.session.pop("active_sub_account_id", None)
+    else:
+        try:
+            sub_id_int = int(sub_id)
+            SubAccount.objects.get(pk=sub_id_int, owner=request.user, is_active=True)
+            request.session["active_sub_account_id"] = sub_id_int
+        except (ValueError, SubAccount.DoesNotExist):
+            request.session.pop("active_sub_account_id", None)
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
+    return redirect(next_url)

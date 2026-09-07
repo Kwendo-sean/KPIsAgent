@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
+from .industry_config import INDUSTRY_CHOICES
 
 
 def _user_upload_path(instance, filename):
@@ -8,11 +9,32 @@ def _user_upload_path(instance, filename):
     return f"bank_statements/user_{instance.uploaded_by_id}/{filename}"
 
 
+class SubAccount(models.Model):
+    """A linked business account created by a primary user (e.g. a client or branch)."""
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sub_accounts")
+    name = models.CharField(max_length=200)
+    industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default="HOSPITAL")
+    contact_name = models.CharField(max_length=100, blank=True)
+    contact_email = models.EmailField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_industry_display()})"
+
+
 class BankStatement(models.Model):
-    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
+    sub_account = models.ForeignKey(
+        SubAccount, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="statements"
+    )
     file_name = models.CharField(max_length=255)
     file = models.FileField(upload_to=_user_upload_path)
-    upload_date = models.DateTimeField(auto_now_add=True)
+    upload_date = models.DateTimeField(auto_now_add=True, db_index=True)
     statement_period_start = models.DateField(null=True, blank=True)
     statement_period_end = models.DateField(null=True, blank=True)
     opening_balance = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
@@ -33,8 +55,8 @@ class BankStatement(models.Model):
 
 
 class FinancialTransaction(models.Model):
-    bank_statement = models.ForeignKey(BankStatement, on_delete=models.CASCADE, related_name="transactions")
-    transaction_date = models.DateField()
+    bank_statement = models.ForeignKey(BankStatement, on_delete=models.CASCADE, related_name="transactions", db_index=True)
+    transaction_date = models.DateField(db_index=True)
     description = models.CharField(max_length=500)
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     transaction_type = models.CharField(
@@ -79,8 +101,8 @@ class KPIMetric(models.Model):
         choices=[("HEALTHY", "Healthy"), ("WARNING", "Warning"), ("CRITICAL", "Critical")],
         default="HEALTHY",
     )
-    bank_statement = models.ForeignKey(BankStatement, on_delete=models.CASCADE, related_name="kpi_metrics")
-    calculated_date = models.DateTimeField(auto_now_add=True)
+    bank_statement = models.ForeignKey(BankStatement, on_delete=models.CASCADE, related_name="kpi_metrics", db_index=True)
+    calculated_date = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -124,12 +146,19 @@ class UserProfile(models.Model):
     role = models.CharField(
         max_length=100,
         choices=[
-            ("DIRECTOR", "Hospital Director"),
+            ("OWNER", "Business Owner"),
+            ("DIRECTOR", "Director / CEO"),
             ("CFO", "Chief Financial Officer"),
             ("MANAGER", "Finance Manager"),
             ("ANALYST", "Financial Analyst"),
+            ("ACCOUNTANT", "Accountant"),
         ],
+        default="MANAGER",
     )
+    industry = models.CharField(
+        max_length=50, choices=INDUSTRY_CHOICES, default="HOSPITAL"
+    )
+    organization_name = models.CharField(max_length=200, blank=True)
     department = models.CharField(max_length=100, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -151,11 +180,11 @@ class AuditLog(models.Model):
         ("BUDGET_SET", "Budget Target Set"),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     detail = models.CharField(max_length=500, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         ordering = ["-created_at"]
