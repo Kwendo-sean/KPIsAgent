@@ -1,4 +1,4 @@
-Django==4.2.0
+Django>=4.2.16,<5.0
 djangorestframework==3.14.0
 django-cors-headers==4.0.0
 PyPDF2==3.0.1

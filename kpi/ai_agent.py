@@ -66,6 +66,208 @@ def _env_key(name: str) -> str:
     return (getattr(settings, name, "") or os.environ.get(name, "")).strip()
 
 
+# ── Local AI mode (llama.cpp / llama-server on loopback) ──────────────────────
+# Edge deployments (the Raspberry Pi 5 AIoT demo) run an OpenAI-compatible
+# llama-server bound to 127.0.0.1. When LOCAL_AI_MODE is on, that server is the
+# ONLY permitted inference backend — statement contents must never reach a
+# cloud provider, and a local failure must surface as an error rather than
+# silently escalating off-device.
+
+_LOCAL_AI_DEFAULT_BASE_URL   = "http://127.0.0.1:8081/v1"
+_LOCAL_AI_DEFAULT_MODEL      = "qwen2.5-0.5b-instruct"
+_LOCAL_AI_DEFAULT_TIMEOUT    = 120
+_LOCAL_AI_DEFAULT_MAX_TOKENS = 384
+
+# Cloud keys that must be absent from a local-mode deployment.
+_CLOUD_KEY_NAMES = (
+    "ANTHROPIC_API_KEY",
+    "GROQ_API_KEY",
+    "GEMINI_API_KEY",
+    "FIREWORKS_API_KEY",
+    "OPENROUTER_API_KEY",
+    "LLM7_API_KEY",
+    "LLM7_API_KEY_2",
+    "LLM7_API_KEY_3",
+)
+
+
+class LocalAIUnavailable(RuntimeError):
+    """Raised when LOCAL_AI_MODE is on and the local model cannot be reached.
+
+    Deliberately an exception rather than a None return: returning None would
+    let _ask() continue into the cloud provider loop, which is precisely the
+    silent external fallback that local mode exists to prevent.
+    """
+
+
+class LocalExtractionFailed(RuntimeError):
+    """Raised when deterministic parsing cannot understand a statement.
+
+    In local mode we refuse to hand the document to a 0.5B model and let it
+    invent figures — an explicit failure is the only safe outcome.
+    """
+
+
+def _load_dotenv() -> None:
+    """Load the project .env if present. Safe to call repeatedly."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
+    except Exception:
+        pass
+
+
+def _local_conf(name: str, default):
+    """Read a LOCAL_AI_* value from Django settings, falling back to .env/environ.
+
+    Unlike _env_key() this tolerates non-string settings values (settings.py
+    exposes LOCAL_AI_MODE as a bool and the limits as ints), so it must not
+    call .strip() on whatever it finds.
+    """
+    val = getattr(settings, name, None)
+    if val is None or val == "":
+        _load_dotenv()
+        val = os.environ.get(name, "")
+    if val is None or val == "":
+        return default
+    return val
+
+
+def local_ai_enabled() -> bool:
+    """True when this deployment must use the local model exclusively."""
+    val = _local_conf("LOCAL_AI_MODE", False)
+    if isinstance(val, bool):
+        return val
+    return str(val).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _local_int(name: str, default: int) -> int:
+    try:
+        return int(str(_local_conf(name, default)).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def local_ai_max_tokens() -> int:
+    """Hard ceiling on locally generated tokens (llama-server context is small)."""
+    return _local_int("LOCAL_AI_MAX_TOKENS", _LOCAL_AI_DEFAULT_MAX_TOKENS)
+
+
+def _ask_local(prompt: str, max_tokens: int = 1024) -> str | None:
+    """Call the local llama-server over loopback via its OpenAI-compatible API.
+
+    Returns None on any failure. Callers in local mode convert that into an
+    explicit LocalAIUnavailable — never into a cloud request.
+    """
+    import requests as _req
+
+    base_url = str(_local_conf("LOCAL_AI_BASE_URL", _LOCAL_AI_DEFAULT_BASE_URL)).rstrip("/")
+    model    = str(_local_conf("LOCAL_AI_MODEL", _LOCAL_AI_DEFAULT_MODEL))
+    timeout  = _local_int("LOCAL_AI_TIMEOUT", _LOCAL_AI_DEFAULT_TIMEOUT)
+    cap      = local_ai_max_tokens()
+    # The local context window is 1024 — never let a caller's cloud-sized
+    # max_tokens (1024/4096/8192) through unclamped.
+    capped   = max(1, min(int(max_tokens or cap), cap))
+
+    try:
+        resp = _req.post(
+            f"{base_url}/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                # llama-server ignores auth, but some proxies require the header.
+                "Authorization": "Bearer local",
+            },
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": capped,
+                "temperature": 0,
+                "stream": False,
+            },
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        choices = resp.json().get("choices") or []
+        if not choices:
+            logger.warning("Local AI returned no choices")
+            return None
+        content = (choices[0].get("message") or {}).get("content") or ""
+        return content.strip() or None
+    except Exception as e:
+        # Log the endpoint and error type only — never the prompt.
+        logger.warning("Local AI request failed (%s): %s: %s", base_url, type(e).__name__, e)
+        return None
+
+
+def _ask_local_or_raise(prompt: str, max_tokens: int = 1024) -> str:
+    """Local-mode dispatch. Raises rather than ever returning control to cloud code."""
+    result = _ask_local(prompt, max_tokens)
+    if result is None:
+        base_url = _local_conf("LOCAL_AI_BASE_URL", _LOCAL_AI_DEFAULT_BASE_URL)
+        raise LocalAIUnavailable(
+            f"LOCAL_AI_MODE is enabled but the local model at {base_url} did not "
+            "respond. Refusing to fall back to an external AI provider."
+        )
+    return result
+
+
+# Headline KPIs used to build compact local prompts. A full json.dumps(kpis)
+# can exceed the local 1024-token context on its own.
+_LOCAL_HEADLINE_KPIS = (
+    "Total_Revenue",
+    "Total_Expenses",
+    "Net_Income",
+    "Profit_Margin",
+    "Expense_to_Revenue_Ratio",
+    "Closing_Balance",
+    "Net_Cash_Flow",
+    "Cash_Runway_Months",
+    "Transaction_Count",
+    "Anomaly_Count",
+)
+
+
+def _compact_kpi_lines(kpis: dict, limit: int = 10) -> str:
+    """Flatten headline KPIs into short 'Name: value unit' lines for local prompts."""
+    lines: list[str] = []
+    for name in _LOCAL_HEADLINE_KPIS:
+        entry = kpis.get(name)
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("value")
+        if value is None:
+            continue
+        if isinstance(value, (int, float)):
+            value = f"{value:,.2f}"
+        unit = entry.get("unit") or ""
+        lines.append(f"{name.replace('_', ' ')}: {value} {unit}".strip())
+        if len(lines) >= limit:
+            break
+    return "\n".join(lines)
+
+
+def warn_if_cloud_keys_present() -> list[str]:
+    """Log a prominent warning if local mode is on while cloud keys are configured.
+
+    Returns the names of the offending variables. Never logs a key value.
+    """
+    if not local_ai_enabled():
+        return []
+    _load_dotenv()
+    present = [
+        name for name in _CLOUD_KEY_NAMES
+        if (getattr(settings, name, "") or os.environ.get(name, "") or "").strip()
+    ]
+    if present:
+        logger.warning(
+            "SECURITY: LOCAL_AI_MODE=true but cloud provider key(s) are configured: %s. "
+            "Local mode blocks all external calls, but these keys should be removed "
+            "from this deployment's environment.",
+            ", ".join(present),
+        )
+    return present
+
+
 # ── Provider functions ─────────────────────────────────────────────────────────
 
 def _ask_ollama(prompt: str, max_tokens: int = 1024) -> str | None:
@@ -349,6 +551,10 @@ _PROVIDER_ORDER = list(_PROVIDER_FUNCS.keys())
 def _ask_text(prompt: str, max_tokens: int = 1024) -> str | None:
     """Text-generation path for insights, reports, and Q&A.
     Priority: OpenRouter → LLM7 text key (dedicated account) → shared provider pool."""
+    # ── Local-mode gate: the local model is the only permitted backend ─────
+    if local_ai_enabled():
+        return _ask_local_or_raise(prompt, max_tokens)
+
     result = _ask_openrouter(prompt, max_tokens)
     if result:
         logger.debug("_ask_text: served by OpenRouter(%s)", _OPENROUTER_MODEL)
@@ -368,6 +574,11 @@ def _ask(prompt: str, max_tokens: int = 1024, primary: str | None = None, json_m
     Try providers in round-robin order starting with `primary`.
     Pass json_mode=True only for calls that must return a JSON array/object.
     """
+    # ── Local-mode gate: the local model is the only permitted backend ─────
+    # Must precede every cloud provider call below, with no path back into them.
+    if local_ai_enabled():
+        return _ask_local_or_raise(prompt, max_tokens)
+
     if primary is None:
         primary = _PROVIDER_ORDER[0]
     order = [primary] + [p for p in _PROVIDER_ORDER if p != primary]
@@ -393,6 +604,13 @@ def _claude_client_for_vision():
     Groq and Gemini REST don't support image inputs in this flow,
     so vision is Claude-only with a graceful None if unavailable.
     """
+    # Local mode: Qwen2.5-0.5B is text-only and there is no local vision model,
+    # so OCR is unavailable rather than delegated to Anthropic. Callers already
+    # handle None; views additionally skip page rendering entirely.
+    if local_ai_enabled():
+        logger.info("LOCAL_AI_MODE: vision/OCR disabled — no external vision call will be made")
+        return None
+
     if not _anthropic_sdk:
         return None
     api_key = _env_key("ANTHROPIC_API_KEY")
@@ -662,8 +880,11 @@ class HospitalKPIAgent:
             logger.info("Batch %d/%d done: %d transactions", idx + 1, total, len(txs))
             return idx, txs
 
-        # 6 concurrent cloud workers — enough to be fast without hammering rate limits
-        with ThreadPoolExecutor(max_workers=min(total, 6)) as pool:
+        # 6 concurrent cloud workers — enough to be fast without hammering rate limits.
+        # Local mode never reaches this method (extraction is deterministic), but a
+        # single 4-thread llama-server must never be hit in parallel, so clamp anyway.
+        max_workers = 1 if local_ai_enabled() else min(total, 6)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
             futures = {pool.submit(run_batch, i, c): i for i, c in enumerate(chunks)}
             for future in as_completed(futures):
                 idx, txs = future.result()
@@ -706,6 +927,29 @@ class HospitalKPIAgent:
     # ── CSV structure detection ────────────────────────────────────────────
 
     def extract_csv_structure_with_ai(self, csv_head_text: str) -> dict | None:
+        """Map CSV/XLSX columns to financial fields.
+
+        Deterministic header detection runs FIRST in every mode — it is exact,
+        instant, and needs no model. The LLM is consulted only when the headers
+        are unrecognisable, and in local mode not at all: a 0.5B model guessing
+        column positions is a silent-corruption risk we decline to take.
+        """
+        mapping = self._detect_csv_structure_deterministic(csv_head_text)
+        if mapping:
+            logger.info("CSV structure resolved deterministically (no LLM call)")
+            return mapping
+
+        if local_ai_enabled():
+            logger.warning(
+                "LOCAL_AI_MODE: deterministic CSV header detection failed — "
+                "refusing to guess column structure with the local model"
+            )
+            return None
+
+        return self._detect_csv_structure_with_llm(csv_head_text)
+
+    def _detect_csv_structure_with_llm(self, csv_head_text: str) -> dict | None:
+        """Cloud-only column mapping, used when header heuristics fail."""
         safe_csv = _redact_pii(csv_head_text)
         prompt = f"""You are a data extraction expert. Analyze the following CSV header/sample rows and identify the zero-based column indices for each financial field.
 
@@ -735,8 +979,10 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
                         return parsed
                 except (json.JSONDecodeError, ValueError):
                     pass
+        return None
 
-        # Header-based fallback with broad keyword coverage
+    def _detect_csv_structure_deterministic(self, csv_head_text: str) -> dict | None:
+        """Header-keyword + numeric-column detection. No model, no network."""
         mapping = {k: None for k in ("date_index", "description_index", "amount_index",
                                      "debit_index", "credit_index", "balance_index",
                                      "transaction_type_index")}
@@ -818,7 +1064,66 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
 
     # ── Financial data extraction ──────────────────────────────────────────
 
+    def extract_local_financial_data(self, bank_statement_text: str) -> dict:
+        """Deterministic-only extraction for LOCAL_AI_MODE.
+
+        No model is involved in producing any figure. Transactions come from the
+        regex parsers in pdf_extractor; totals and the closing balance are
+        computed in Python exactly as the cloud path already does. If parsing
+        cannot find transactions, we raise rather than return invented data.
+        """
+        logger.info(
+            "LOCAL_AI_MODE: deterministic extraction over %s chars (no LLM)",
+            f"{len(bank_statement_text):,}",
+        )
+
+        normalized = self._normalize_text(bank_statement_text)
+        transactions = BankStatementPDFExtractor.parse_mpesa_transactions(normalized)
+
+        # Summary/aggregate view — also supplies opening balance and period dates.
+        regex_data = BankStatementPDFExtractor.build_fallback_financial_data_from_text(normalized) or {}
+        if not transactions:
+            transactions = regex_data.get("transactions") or []
+
+        if not transactions:
+            raise LocalExtractionFailed(
+                "Deterministic parsing found no transactions in this statement. "
+                "In local mode the statement is not sent to any AI model for "
+                "extraction, so it cannot be processed. Supported locally: "
+                "digital (text-layer) PDF, CSV and XLSX. Scanned/image-only PDFs "
+                "require OCR, which is unavailable in local mode."
+            )
+
+        total_dep = sum(t["amount"] for t in transactions if t.get("type") == "DEPOSIT")
+        total_wd  = sum(t["amount"] for t in transactions if t.get("type") == "WITHDRAWAL")
+
+        dated = sorted((t for t in transactions if t.get("date")), key=lambda t: t["date"])
+
+        opening_balance = float(regex_data.get("opening_balance") or 0.0)
+        # Same deterministic rule as the cloud path — never a model's opinion.
+        closing_balance = opening_balance + total_dep - total_wd
+
+        result = {
+            "statement_period_start": dated[0]["date"]  if dated else regex_data.get("statement_period_start"),
+            "statement_period_end":   dated[-1]["date"] if dated else regex_data.get("statement_period_end"),
+            "opening_balance":        opening_balance,
+            "closing_balance":        closing_balance,
+            "total_deposits":         total_dep,
+            "total_withdrawals":      total_wd,
+            "transactions":           transactions,
+        }
+        logger.info(
+            "LOCAL_AI_MODE: %d transactions parsed deterministically, period=%s → %s",
+            len(transactions), result["statement_period_start"], result["statement_period_end"],
+        )
+        return result
+
     def extract_financial_data(self, bank_statement_text: str) -> dict | None:
+        # Local mode: figures come from Python only. The model never sees
+        # transaction text and never produces a number.
+        if local_ai_enabled():
+            return self.extract_local_financial_data(bank_statement_text)
+
         safe_text = _redact_pii(bank_statement_text)
         logger.info("extract_financial_data: %s chars", f"{len(bank_statement_text):,}")
 
@@ -851,7 +1156,8 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
             '"opening_balance":0.00,"closing_balance":0.00,"total_deposits":0.00,"total_withdrawals":0.00}'
         )
         summary_text = _ask(summary_prompt, max_tokens=512, json_mode=True)
-        logger.info("summary response: %s", repr(summary_text[:300]) if summary_text else "None")
+        # Do not log the response body — it contains balances and period data.
+        logger.info("summary response: %s chars", len(summary_text) if summary_text else 0)
 
         summary: dict = {}
         if summary_text:
@@ -1126,6 +1432,21 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
     # ── Insights & Alerts ─────────────────────────────────────────────────
 
     def generate_insights(self, transactions, kpis, statement_period):
+        if local_ai_enabled():
+            prompt = (
+                "You are a financial analyst. Using ONLY the figures below, write a short "
+                "performance summary: one paragraph on performance, then 2-3 bullet points "
+                "of concerns or recommendations.\n"
+                "Use HTML tags only: <h3>, <p>, <ul>, <li>, <strong>. No markdown.\n"
+                "Do not invent numbers. Currency is KES.\n\n"
+                f"Period: {statement_period}\n"
+                f"{_compact_kpi_lines(kpis)}"
+            )
+            text = _ask_text(prompt, max_tokens=local_ai_max_tokens())
+            if text:
+                text = _extract_html_body(_strip_code_fences(text))
+            return text if text else self._generate_local_insights(transactions, kpis, statement_period)
+
         prompt = f"""You are a hospital financial analyst. Based on the KPIs below, write a clear financial performance summary.
 
 Structure your response as HTML using only these tags: <h3>, <p>, <ul>, <li>, <strong>.
@@ -1176,6 +1497,18 @@ Statement Period: {statement_period}"""
     # ── Q&A ───────────────────────────────────────────────────────────────
 
     def answer_question(self, question, kpis, bank_statement_text):
+        if local_ai_enabled():
+            # Note: the statement text is deliberately NOT included — the local
+            # context is small and the KPIs already answer the question.
+            prompt = (
+                "Answer the question using ONLY the figures below. Be brief and direct. "
+                "Do not invent numbers. Currency is KES.\n\n"
+                f"Question: {question}\n\n"
+                f"{_compact_kpi_lines(kpis)}"
+            )
+            text = _ask_text(prompt, max_tokens=local_ai_max_tokens())
+            return text if text else self._answer_locally(question, kpis)
+
         prompt = f"""You are a hospital financial expert. Answer this question using the KPIs below.
 
 Question: {question}
@@ -1188,6 +1521,18 @@ Give a direct, data-driven answer. Use KES for currency. Format clearly with bul
         return text if text else self._answer_locally(question, kpis)
 
     def answer_system_question(self, question, system_context):
+        if local_ai_enabled():
+            # 8 KB of JSON does not fit a 1024-token context — send a short slice.
+            context_text = json.dumps(system_context, default=str)[:1200]
+            prompt = (
+                "You are a finance assistant. Answer briefly using the context below. "
+                "If the context does not contain the answer, say so. Currency is KES.\n\n"
+                f"Question: {question}\n\n"
+                f"Context: {context_text}"
+            )
+            text = _ask_text(prompt, max_tokens=local_ai_max_tokens())
+            return text if text else self._answer_from_system_context(question, system_context)
+
         prompt = f"""You are the finance copilot for a hospital KPI dashboard.
 Answer questions about uploaded statements, KPIs, transactions, comparisons, and system usage.
 Stay grounded in the provided context. For general finance questions not in context, answer as a helpful finance expert.
@@ -1202,6 +1547,16 @@ System Context:
         return text if text else self._answer_from_system_context(question, system_context)
 
     def generate_report_summary(self, report_context):
+        if local_ai_enabled():
+            prompt = (
+                "Write a brief executive summary (one short paragraph, then 2-3 bullets "
+                "of risks or actions) from the figures below. Do not invent numbers. "
+                "Currency is KES.\n\n"
+                f"{json.dumps(report_context, default=str)[:1200]}"
+            )
+            text = _ask_text(prompt, max_tokens=local_ai_max_tokens())
+            return text if text else self._build_local_report_summary(report_context)
+
         prompt = f"""You are preparing a finance summary report for a hospital KPI dashboard.
 Write:
 1. Executive summary
@@ -1216,7 +1571,45 @@ Analytics Context:
         text = _ask_text(prompt, max_tokens=1024)
         return text if text else self._build_local_report_summary(report_context)
 
+    # Section scaffolding for the local detailed report: (heading, focus instruction).
+    _LOCAL_REPORT_SECTIONS = (
+        ("Executive Summary",              "overall financial position in 3-4 sentences"),
+        ("Revenue & Expense Analysis",     "what revenue and expenses show, in 3-4 sentences"),
+        ("Cash Flow & Liquidity",          "cash position and runway, in 3-4 sentences"),
+        ("Risks & Recommendations",        "the top 3 risks or actions, as bullet points"),
+    )
+
+    def generate_local_detailed_report(self, report_context) -> str:
+        """Compose a detailed report from deterministic scaffolding.
+
+        A 0.5B model at 1024 context cannot produce a coherent five-section CFO
+        report in one pass, so the structure and every figure come from Python
+        and the model writes only a short explanation per section.
+        """
+        kpis = report_context.get("kpis") if isinstance(report_context, dict) else None
+        facts = _compact_kpi_lines(kpis) if isinstance(kpis, dict) else \
+            json.dumps(report_context, default=str)[:900]
+
+        parts = ["# Financial Report", "", "## Key Figures", "", "```", facts, "```", ""]
+        for heading, focus in self._LOCAL_REPORT_SECTIONS:
+            prompt = (
+                f"Write the '{heading}' section of a financial report: {focus}. "
+                "Use ONLY the figures below — do not invent numbers. Currency is KES. "
+                "Plain prose, no headings.\n\n"
+                f"{facts}"
+            )
+            # Serial by construction: one small request per section.
+            body = _ask_text(prompt, max_tokens=min(256, local_ai_max_tokens()))
+            parts += [f"## {heading}", "", (body or "_Not available._").strip(), ""]
+
+        parts += ["---", "", "_Figures computed deterministically; narrative generated "
+                  "on-device by the local model._"]
+        return "\n".join(parts)
+
     def generate_detailed_report(self, report_context):
+        if local_ai_enabled():
+            return self.generate_local_detailed_report(report_context)
+
         prompt = f"""You are a fractional CFO and expert financial analyst.
 Write a comprehensive, multi-section financial report based on the data below.
 

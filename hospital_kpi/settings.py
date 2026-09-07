@@ -111,11 +111,32 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+] + [o.strip() for o in os.environ.get("EXTRA_CORS_ORIGINS", "").split(",") if o.strip()]
+
+# Django 4.2 requires an explicit trusted origin for any non-localhost host, or
+# every POST (upload, AJAX) fails CSRF validation. The Pi serves the app at
+# http://10.42.0.1:8090, so that origin must be listed there via CSRF_TRUSTED_ORIGINS.
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",") if o.strip()
 ]
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 # Legacy — kept so .env files with the old key still load without crashing
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+
+# ── Local AI mode (edge deployment: llama.cpp on loopback) ────────────────────
+# When true, ALL inference goes to a local llama-server and no external AI
+# provider may be contacted under any circumstance. Defaults to false so
+# existing cloud deployments are completely unaffected.
+LOCAL_AI_MODE = os.environ.get("LOCAL_AI_MODE", "false").strip().lower() in ("1", "true", "yes", "on")
+LOCAL_AI_BASE_URL = os.environ.get("LOCAL_AI_BASE_URL", "http://127.0.0.1:8081/v1").strip()
+LOCAL_AI_MODEL = os.environ.get("LOCAL_AI_MODEL", "qwen2.5-0.5b-instruct").strip()
+LOCAL_AI_TIMEOUT = int(os.environ.get("LOCAL_AI_TIMEOUT", "120"))
+# Ceiling on generated tokens — the local server's context is 1024.
+LOCAL_AI_MAX_TOKENS = int(os.environ.get("LOCAL_AI_MAX_TOKENS", "384"))
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
@@ -124,7 +145,8 @@ LOGIN_REDIRECT_URL = "dashboard"
 Q_CLUSTER = {
     "name": "hospital_kpi",
     "secret_key": "hospital-kpi-queue-v1",  # explicit key — never derived from SECRET_KEY
-    "workers": 2,
+    # One worker on constrained edge hardware (4 GB Pi shared with llama-server).
+    "workers": int(os.environ.get("Q_WORKERS", "1" if LOCAL_AI_MODE else "2")),
     "timeout": 86400,   # 24 hours — tasks always finish regardless of file size
     "retry": 90000,     # must be > timeout to prevent re-trigger before completion
     "queue_limit": 50,

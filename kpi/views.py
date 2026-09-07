@@ -37,7 +37,12 @@ from .models import (
     TwoFactorProfile, SubAccount,
 )
 from .pdf_extractor import BankStatementPDFExtractor, PDFPasswordRequired, PDFWrongPassword
-from .ai_agent import HospitalKPIAgent
+from .ai_agent import (
+    HospitalKPIAgent,
+    LocalAIUnavailable,
+    LocalExtractionFailed,
+    local_ai_enabled,
+)
 from .industry_config import (
     INDUSTRY_CHOICES, INDUSTRY_SECTORS, get_industry_label, get_ai_context,
 )
@@ -1435,30 +1440,46 @@ def upload_bank_statement(request):
                         "error": str(e),
                     }, status=400)
 
-                agent_for_ocr = HospitalKPIAgent()
-
-                # Always attempt OCR alongside text extraction.
-                # For scanned PDFs, text is empty → OCR is essential.
-                # For digital PDFs (e.g. M-PESA), OCR gives a cleaner structured
-                # representation that supplements the regex parser.
-                page_images = BankStatementPDFExtractor.render_pdf_pages_to_images(
-                    uploaded_file, password=pdf_password
-                )
-
-                if BankStatementPDFExtractor.needs_ocr(extracted_text):
-                    # Scanned PDF — OCR is the only source of text
-                    if page_images:
-                        ocr_text = agent_for_ocr.ocr_pdf_pages(page_images)
-                        if ocr_text:
-                            extracted_text = ocr_text
+                if local_ai_enabled():
+                    # Local mode: no vision model exists on-device, so OCR is
+                    # unavailable. Skip page rendering entirely — it would cost
+                    # RAM and time for images nothing can read.
+                    if BankStatementPDFExtractor.needs_ocr(extracted_text):
+                        bank_statement.delete()
+                        return JsonResponse({
+                            "success": False,
+                            "error": (
+                                "This PDF appears to be scanned or image-only. OCR is "
+                                "unavailable in local mode, and the document will not be "
+                                "sent to any external service. Please upload a digital "
+                                "(text-layer) PDF, CSV or XLSX."
+                            ),
+                        }, status=400)
                 else:
-                    # Digital PDF — check if regex finds any transactions from native text;
-                    # if not, fall back to OCR which may produce cleaner output
-                    test_txns = BankStatementPDFExtractor.parse_mpesa_transactions(extracted_text)
-                    if not test_txns and page_images:
-                        ocr_text = agent_for_ocr.ocr_pdf_pages(page_images)
-                        if ocr_text and len(ocr_text.strip()) > len(extracted_text.strip()):
-                            extracted_text = ocr_text
+                    agent_for_ocr = HospitalKPIAgent()
+
+                    # Always attempt OCR alongside text extraction.
+                    # For scanned PDFs, text is empty → OCR is essential.
+                    # For digital PDFs (e.g. M-PESA), OCR gives a cleaner structured
+                    # representation that supplements the regex parser.
+                    page_images = BankStatementPDFExtractor.render_pdf_pages_to_images(
+                        uploaded_file, password=pdf_password
+                    )
+
+                    if BankStatementPDFExtractor.needs_ocr(extracted_text):
+                        # Scanned PDF — OCR is the only source of text
+                        if page_images:
+                            ocr_text = agent_for_ocr.ocr_pdf_pages(page_images)
+                            if ocr_text:
+                                extracted_text = ocr_text
+                    else:
+                        # Digital PDF — check if regex finds any transactions from native text;
+                        # if not, fall back to OCR which may produce cleaner output
+                        test_txns = BankStatementPDFExtractor.parse_mpesa_transactions(extracted_text)
+                        if not test_txns and page_images:
+                            ocr_text = agent_for_ocr.ocr_pdf_pages(page_images)
+                            if ocr_text and len(ocr_text.strip()) > len(extracted_text.strip()):
+                                extracted_text = ocr_text
 
                 bank_statement.extracted_text = BankStatementPDFExtractor.clean_pdf_text(extracted_text)
                 bank_statement.save()
@@ -1818,6 +1839,14 @@ def process_bank_statement_with_ai(bank_statement):
 
         _process_with_financial_data(bank_statement, financial_data)
 
+    except (LocalExtractionFailed, LocalAIUnavailable) as e:
+        # Local mode refused to proceed. This is a deliberate stop, not a crash:
+        # nothing was sent off-device and no figures were invented.
+        logger.warning("Local-mode processing halted for statement %s: %s",
+                       bank_statement.pk, e)
+        bank_statement.processing_error = str(e)
+        bank_statement.is_processed = False
+        bank_statement.save()
     except Exception as e:
         bank_statement.processing_error = str(e)
         bank_statement.is_processed = False
