@@ -1441,20 +1441,60 @@ def upload_bank_statement(request):
                     }, status=400)
 
                 if local_ai_enabled():
-                    # Local mode: no vision model exists on-device, so OCR is
-                    # unavailable. Skip page rendering entirely — it would cost
-                    # RAM and time for images nothing can read.
+                    # Local mode. A PDF that already has usable text is NEVER
+                    # OCR'd — the text layer is better than any OCR of it, and
+                    # rendering pages would waste RAM and time.
                     if BankStatementPDFExtractor.needs_ocr(extracted_text):
-                        bank_statement.delete()
-                        return JsonResponse({
-                            "success": False,
-                            "error": (
-                                "This PDF appears to be scanned or image-only. OCR is "
-                                "unavailable in local mode, and the document will not be "
-                                "sent to any external service. Please upload a digital "
-                                "(text-layer) PDF, CSV or XLSX."
-                            ),
-                        }, status=400)
+                        from .local_ocr import LocalOCRUnavailable, local_ocr_enabled
+
+                        if not local_ocr_enabled():
+                            bank_statement.delete()
+                            return JsonResponse({
+                                "success": False,
+                                "error": (
+                                    "This PDF appears to be scanned or image-only. Local "
+                                    "OCR is not enabled, and the document will not be sent "
+                                    "to any external service. Please upload a digital "
+                                    "(text-layer) PDF, CSV or XLSX."
+                                ),
+                            }, status=400)
+
+                        # Render only now that we know OCR will actually consume them.
+                        page_images = BankStatementPDFExtractor.render_pdf_pages_to_images(
+                            uploaded_file, password=pdf_password
+                        )
+                        if not page_images:
+                            bank_statement.delete()
+                            return JsonResponse({
+                                "success": False,
+                                "error": "Could not render this PDF's pages for local OCR.",
+                            }, status=400)
+
+                        try:
+                            ocr_text = HospitalKPIAgent().ocr_pdf_pages(page_images)
+                        except LocalOCRUnavailable as e:
+                            bank_statement.delete()
+                            logger.warning("Local OCR unavailable: %s", e)
+                            return JsonResponse({
+                                "success": False,
+                                "error": f"Local OCR error: {e}",
+                            }, status=400)
+                        finally:
+                            # ocr_pages_to_text clears slots as it goes; drop the
+                            # list itself so nothing survives this request.
+                            page_images = None
+
+                        if not ocr_text:
+                            bank_statement.delete()
+                            return JsonResponse({
+                                "success": False,
+                                "error": (
+                                    "Local OCR could not read any text from this document. "
+                                    "Nothing was sent externally. Try a higher-quality scan "
+                                    "or a digital PDF/CSV/XLSX."
+                                ),
+                            }, status=400)
+                        extracted_text = ocr_text
                 else:
                     agent_for_ocr = HospitalKPIAgent()
 

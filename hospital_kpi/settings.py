@@ -138,6 +138,17 @@ LOCAL_AI_TIMEOUT = int(os.environ.get("LOCAL_AI_TIMEOUT", "120"))
 # Ceiling on generated tokens — the local server's context is 1024.
 LOCAL_AI_MAX_TOKENS = int(os.environ.get("LOCAL_AI_MAX_TOKENS", "384"))
 
+# ── Local OCR (RapidOCR + ONNX Runtime CPU, bundled PP-OCR models) ────────────
+# Only consulted when LOCAL_AI_MODE is also true. Default false, so neither
+# cloud deployments nor a local-AI deployment without the OCR stack are affected.
+LOCAL_OCR_ENABLED = os.environ.get("LOCAL_OCR_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Blank means "use the models bundled inside the installed rapidocr package".
+# Models are never downloaded at runtime; a missing file is an explicit error.
+LOCAL_OCR_MODEL_DIR = os.environ.get("LOCAL_OCR_MODEL_DIR", "").strip()
+# Leave cores free for llama-server (which uses 4 threads).
+LOCAL_OCR_THREADS = int(os.environ.get("LOCAL_OCR_THREADS", "2"))
+LOCAL_OCR_MAX_PAGES = int(os.environ.get("LOCAL_OCR_MAX_PAGES", "20"))
+
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 

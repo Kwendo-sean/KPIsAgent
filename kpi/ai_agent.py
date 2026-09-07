@@ -710,7 +710,25 @@ class HospitalKPIAgent:
     # ── OCR (vision — Claude only) ─────────────────────────────────────────
 
     def ocr_pdf_pages(self, page_images_b64: list[str]) -> str | None:
-        """Send scanned PDF page images to Claude Vision for OCR."""
+        """OCR scanned PDF pages.
+
+        Local mode uses on-device RapidOCR and never contacts Claude Vision or
+        any other external service; cloud mode is unchanged.
+        """
+        if local_ai_enabled():
+            # Imported lazily: the OCR stack is a Pi-only dependency and must
+            # not be required by cloud installs.
+            from .local_ocr import local_ocr_enabled, ocr_pages_to_text
+
+            if not local_ocr_enabled():
+                logger.info(
+                    "LOCAL_AI_MODE: OCR requested but LOCAL_OCR_ENABLED is false — "
+                    "no external vision call will be made"
+                )
+                return None
+            # Raises LocalOCRUnavailable on failure — never falls back to cloud.
+            return ocr_pages_to_text(page_images_b64)
+
         client = _claude_client_for_vision()
         if client is None or not page_images_b64:
             return None

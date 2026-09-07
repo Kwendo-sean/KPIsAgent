@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Raspberry Pi 5 — local OCR stack (aarch64, Debian 13 trixie, Python 3.13)
+#
+# Install AFTER requirements.txt, and only if scanned-PDF support is needed.
+# Deliberately kept out of requirements.txt so cloud installs stay lean.
+#
+# PaddlePaddle is NOT used. Its 3.3.x releases publish no Linux aarch64 wheels
+# and no sdist at all, so it cannot be installed on this Pi. RapidOCR runs the
+# same PP-OCR model family on ONNX Runtime instead.
+#
+# ── IMPORTANT: install order ────────────────────────────────────────────────
+# rapidocr declares `opencv_python` (the GUI build), which needs libGL.so.1 and
+# will fail to import on a headless Pi. Install without dependencies, then add
+# them with the headless OpenCV build, which provides the same `cv2` module:
+#
+#   pip install --no-deps rapidocr==3.9.2
+#   pip install -r requirements-pi.txt
+#
+# Verify afterwards:
+#   python -c "import cv2, onnxruntime; print(cv2.__version__, onnxruntime.__version__)"
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Verified to publish cp313 + linux aarch64 wheels (checked against PyPI).
+onnxruntime==1.28.0
+# abi3 wheel (cp37-abi3) valid for Python 3.13; headless = no libGL requirement.
+opencv-python-headless==4.12.0.88
+
+# rapidocr's remaining runtime dependencies, installed explicitly because we
+# use --no-deps above to keep the GUI OpenCV out.
+pyclipper==1.3.0.post6
+shapely==2.1.1
+numpy>=2.0,<3.0
+omegaconf!=2.2.1
+PyYAML>=6
+Pillow>=10.0.0
+tqdm
+six>=1.15.0
+colorlog
+
+# NOTE: rapidocr itself is installed separately with --no-deps (see above):
+#   pip install --no-deps rapidocr==3.9.2
+# Its wheel is pure Python and bundles the PP-OCR ONNX models it needs:
+#   rapidocr/models/PP-OCRv6_det_small.onnx          (9.9 MB)
+#   rapidocr/models/PP-OCRv6_rec_small.onnx          (21.2 MB)
+#   rapidocr/models/ch_ppocr_mobile_v2.0_cls_mobile.onnx (0.6 MB)
+# so no model download is ever required at runtime.
