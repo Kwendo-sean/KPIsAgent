@@ -1569,7 +1569,8 @@ Give a direct, data-driven answer. Use KES for currency. Format clearly with bul
         return text if text else self._answer_locally(question, kpis)
 
     def answer_with_analytics(self, question, transactions, history=None,
-                              opening_balance=None, closing_balance=None):
+                              opening_balance=None, closing_balance=None,
+                              statements=None, kpis=None):
         """Answer using deterministic tools, with the model only explaining.
 
         Local mode only. Every figure comes from analytics_tools; the model
@@ -1586,6 +1587,8 @@ Give a direct, data-driven answer. Use KES for currency. Format clearly with bul
             history=history,
             opening_balance=opening_balance,
             closing_balance=closing_balance,
+            statements=statements,
+            kpis=kpis,
         )
 
     def answer_system_question(self, question, system_context):

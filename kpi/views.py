@@ -53,6 +53,9 @@ logger = logging.getLogger("kpi.views")
 _MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 # Maximum question length sent to AI
 _MAX_QUESTION_LEN = 2000
+# Turns of prior conversation given to the assistant. Small on purpose: the
+# local model runs on a Pi, and only the latest turn resolves a follow-up.
+MAX_ASSISTANT_HISTORY = 3
 
 
 def _get_client_ip(request):
@@ -1934,6 +1937,7 @@ class AskAIView(APIView):
             ).prefetch_related("transactions").order_by("-upload_date")
 
             statements_context = []
+            statements_meta = []
             all_transactions = []
             total_revenue = 0.0
             total_expenses = 0.0
@@ -1946,6 +1950,14 @@ class AskAIView(APIView):
                 statements_context.append({
                     "file_name": s.file_name,
                     "period": f"{s.statement_period_start} to {s.statement_period_end}",
+                    "deposits": deposits,
+                    "withdrawals": withdrawals,
+                    "closing_balance": float(getattr(s, "closing_balance", 0) or 0),
+                })
+                statements_meta.append({
+                    "file_name": s.file_name,
+                    "period_start": s.statement_period_start,
+                    "period_end": s.statement_period_end,
                     "deposits": deposits,
                     "withdrawals": withdrawals,
                     "closing_balance": float(getattr(s, "closing_balance", 0) or 0),
@@ -2005,17 +2017,40 @@ class AskAIView(APIView):
                     for s in all_statements for tx in s.transactions.all()
                 ]
                 latest = all_statements.first()
+
+                # Stored KPI metrics, so the assistant can answer about margin,
+                # liquidity and the rest without recomputing anything.
+                kpi_rows = list(
+                    KPIMetric.objects.filter(
+                        bank_statement__uploaded_by=request.user
+                    ).order_by("-calculated_date")
+                    .values("metric_name", "current_value", "unit", "status", "metric_type")[:40]
+                )
                 outcome = agent.answer_with_analytics(
                     question,
                     tool_transactions,
                     history=[
                         {"question": h["title"].removeprefix("Q: "), "answer": h["content"]}
-                        for h in reversed(history[:3])
+                        for h in reversed(history[:MAX_ASSISTANT_HISTORY])
                     ],
                     opening_balance=(float(latest.opening_balance)
                                      if latest and latest.opening_balance is not None else None),
                     closing_balance=(float(latest.closing_balance)
                                      if latest and latest.closing_balance is not None else None),
+                    statements=[
+                        {"file_name": s["file_name"],
+                         "period_start": str(s["period_start"] or ""),
+                         "period_end": str(s["period_end"] or ""),
+                         "deposits": float(s["deposits"] or 0),
+                         "withdrawals": float(s["withdrawals"] or 0),
+                         "closing_balance": float(s["closing_balance"] or 0)}
+                        for s in statements_meta
+                    ],
+                    kpis=[
+                        {"name": k["metric_name"], "value": float(k["current_value"]),
+                         "unit": k["unit"], "status": k["status"], "type": k["metric_type"]}
+                        for k in kpi_rows
+                    ],
                 )
                 answer = outcome["answer"]
                 logger.info("Assistant answered via tools %s (routed by %s)",

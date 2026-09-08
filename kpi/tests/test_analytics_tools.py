@@ -125,9 +125,13 @@ class TestDeterministicMath:
     def test_unusual_transactions_use_fixed_statistical_rule(self):
         out = at.get_unusual_large_transactions(ROWS)
         assert out["available"] is True
-        assert out["method"] == "mean_plus_2_standard_deviations"
+        assert out["method"] == "average_debit_plus_2_standard_deviations"
         # Threshold is computed, not chosen by a model.
-        assert out["threshold"] > out["mean_debit"]
+        assert out["threshold"] > out["average_debit"]
+        # The metric shares its name with get_transaction_summary on purpose:
+        # two names for one quantity invited a meaningless "comparison".
+        summary = at.get_transaction_summary(ROWS)
+        assert out["average_debit"] == pytest.approx(summary["average_debit"])
 
     def test_balance_trend_absent_without_running_balance(self):
         assert at.get_balance_trend(ROWS)["available"] is False

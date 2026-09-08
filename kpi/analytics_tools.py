@@ -225,6 +225,7 @@ def get_largest_transactions(rows: list[dict], direction: str = "debit",
             {"date": r["date"].isoformat() if r["date"] else None,
              "description": r["description"][:70],
              "amount": round(r["amount"], 2),
+             "direction": r["direction"],
              "category": r["category"]}
             for r in top
         ],
@@ -367,6 +368,55 @@ def get_category_transactions(rows: list[dict], category: str,
             "transactions": result["transactions"]}
 
 
+def get_statements(rows: list[dict], statements: list[dict] | None = None,
+                   limit: int = DEFAULT_TOP_N) -> dict:
+    """List the user's uploaded statements with their periods and totals.
+
+    Reads the statement records supplied by the caller, so the assistant can
+    answer questions about the account's history rather than only its
+    transactions.
+    """
+    statements = statements or []
+    return {
+        "statement_count": len(statements),
+        "statements": [
+            {"file_name": s.get("file_name"),
+             "period_start": s.get("period_start"),
+             "period_end": s.get("period_end"),
+             "deposits": s.get("deposits"),
+             "withdrawals": s.get("withdrawals"),
+             "closing_balance": s.get("closing_balance")}
+            for s in statements[:_clamp_limit(limit)]
+        ],
+    }
+
+
+def get_kpi_metrics(rows: list[dict], kpis: list[dict] | None = None,
+                    limit: int = DEFAULT_TOP_N) -> dict:
+    """Return stored KPI metrics with their thresholds and status.
+
+    These were computed by the deterministic KPI engine at upload time; this
+    tool only reads them back.
+    """
+    kpis = kpis or []
+    return {
+        "metric_count": len(kpis),
+        "metrics": [
+            {"name": k.get("name"), "value": k.get("value"),
+             "unit": k.get("unit"), "status": k.get("status"),
+             "type": k.get("type")}
+            for k in kpis[:_clamp_limit(limit, 10)]
+        ],
+    }
+
+
+def list_categories(rows: list[dict]) -> dict:
+    """Every category present, so the assistant can suggest valid filters."""
+    debit = sorted({r["category"] for r in _debits(rows)})
+    credit = sorted({r["category"] for r in _credits(rows)})
+    return {"expense_categories": debit[:25], "income_categories": credit[:25]}
+
+
 def get_balance_trend(rows: list[dict]) -> dict:
     dated = sorted((r for r in rows if r["date"] and r["balance"] is not None),
                    key=lambda r: r["date"])
@@ -386,35 +436,46 @@ def get_balance_trend(rows: list[dict]) -> dict:
 
 
 def get_unusual_large_transactions(rows: list[dict], limit: int = DEFAULT_TOP_N) -> dict:
-    """Flag outliers by a fixed statistical rule.
+    """Flag outlying debits by a fixed statistical rule.
 
-    Threshold is mean + 2 standard deviations of debit amounts, computed here.
-    The model is never asked to judge what counts as unusual, and nothing here
-    implies fraud — only that a value sits outside the normal spread.
+    Threshold is the average debit plus two standard deviations, computed here.
+    The model is never asked to judge what counts as unusual.
+
+    Being above the threshold means only that an amount sits outside the normal
+    spread of this account's debits. It is not evidence of error or wrongdoing,
+    and nothing in this output should be presented as such.
+
+    The metric is named `average_debit` to match get_transaction_summary
+    exactly. They are the same quantity, and giving it two names invited the
+    model to "compare" it with itself.
     """
     debits = _debits(rows)
     amounts = [r["amount"] for r in debits]
     if len(amounts) < 4:
         return {"available": False, "reason": "not_enough_transactions",
-                "transaction_count": len(amounts)}
+                "debit_count": len(amounts)}
 
     mean = statistics.fmean(amounts)
     sd = statistics.pstdev(amounts)
     threshold = mean + 2 * sd
-    outliers = sorted((r for r in debits if r["amount"] > threshold),
-                      key=lambda r: r["amount"], reverse=True)[:_clamp_limit(limit)]
+    flagged = [r for r in debits if r["amount"] > threshold]
+    shown = sorted(flagged, key=lambda r: r["amount"], reverse=True)[:_clamp_limit(limit)]
     return {
         "available": True,
-        "method": "mean_plus_2_standard_deviations",
-        "mean_debit": round(mean, 2),
+        "method": "average_debit_plus_2_standard_deviations",
+        "average_debit": round(mean, 2),
+        "standard_deviation": round(sd, 2),
         "threshold": round(threshold, 2),
-        "count": len(outliers),
+        "count": len(flagged),
+        "shown": len(shown),
         "transactions": [
             {"date": r["date"].isoformat() if r["date"] else None,
              "description": r["description"][:70],
              "amount": round(r["amount"], 2),
-             "category": r["category"]}
-            for r in outliers
+             "direction": r["direction"],
+             "category": r["category"],
+             "reason": "amount_above_outlier_threshold"}
+            for r in shown
         ],
     }
 
@@ -628,7 +689,30 @@ TOOL_REGISTRY: dict[str, dict[str, Any]] = {
         "desc": "Repeating payments with cadence and confidence.",
         "args": {"limit": _INT},
     },
+    "get_statements": {
+        "fn": get_statements,
+        "desc": "List uploaded statements with their periods and totals.",
+        "args": {"limit": _INT},
+        "context": ("statements",),
+    },
+    "get_kpi_metrics": {
+        "fn": get_kpi_metrics,
+        "desc": "Stored KPI metrics such as profit margin and liquidity, with status.",
+        "args": {"limit": _INT},
+        "context": ("kpis",),
+    },
+    "list_categories": {
+        "fn": list_categories,
+        "desc": "All expense and income categories present in the data.",
+        "args": {},
+    },
 }
+
+# Context keys a tool may receive beyond the transaction rows. Supplied by the
+# caller (the view), never by the model.
+_CONTEXT_KEYS = ("statements", "kpis", "opening_balance", "closing_balance")
+
+TOOL_REGISTRY["get_transaction_summary"]["context"] = ("opening_balance", "closing_balance")
 
 _COERCERS: dict[str, Callable[[Any], Any]] = {
     _STR: lambda v: str(v)[:100],
@@ -670,10 +754,21 @@ def validate_call(name: Any, arguments: Any) -> tuple[str, dict[str, Any]]:
 
 
 def run_tool(name: str, rows: list[dict], arguments: dict[str, Any] | None = None,
-             **extra: Any) -> Any:
-    """Execute a validated tool. Never call with unvalidated input."""
+             context: dict[str, Any] | None = None) -> Any:
+    """Execute a validated tool. Never call with unvalidated input.
+
+    `context` carries caller-supplied data (statements, stored KPIs, balances).
+    Only the keys a tool declares are passed, and only from the caller — the
+    model cannot reach into it.
+    """
     name, clean = validate_call(name, arguments or {})
-    return TOOL_REGISTRY[name]["fn"](rows, **clean, **extra)
+    meta = TOOL_REGISTRY[name]
+    extra = {
+        key: (context or {}).get(key)
+        for key in meta.get("context", ())
+        if key in _CONTEXT_KEYS
+    }
+    return meta["fn"](rows, **clean, **extra)
 
 
 def tool_catalogue() -> str:
