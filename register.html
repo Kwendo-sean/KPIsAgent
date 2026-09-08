@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Create Account | KPIConsole</title>
 <link href="/static/vendor/fonts/fonts.css" rel="stylesheet">
 <link href="/static/vendor/fontawesome/css/all.min.css" rel="stylesheet">
+<link href="/static/css/theme-public.css" rel="stylesheet">
+<script src="/static/js/theme-public.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -20,6 +22,8 @@
   --accent:   #7BD3AE;
   --accent-2: #A7E8CA;
   --accent-soft:rgba(123,211,174,0.12);
+  --on-accent:#061A0F;
+  --hero-bg:  #040C07;
   --error:    #F87171;
   --error-bg: rgba(248,113,113,0.10);
   --error-line:rgba(248,113,113,0.25);
@@ -34,7 +38,7 @@ canvas{display:block}
 
 /* ── Layout ─────────────────────────────────────────────── */
 .auth{min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr;background:var(--bg)}
-.auth__left{position:relative;padding:36px 48px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--line);overflow:hidden;background:#040C07}
+.auth__left{position:relative;padding:36px 48px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--line);overflow:hidden;background:var(--hero-bg)}
 .auth__right{padding:36px 56px;display:flex;flex-direction:column;justify-content:center;background:var(--paper)}
 .auth__form{width:100%;max-width:480px;margin:0 auto}
 
@@ -65,7 +69,7 @@ canvas{display:block}
 /* ── Progress strip ─────────────────────────────────────── */
 .progress{display:flex;align-items:center;gap:14px;margin-bottom:32px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.10em;text-transform:uppercase;color:var(--muted)}
 .progress__num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--line-2);background:transparent;font-size:.70rem;color:var(--muted);transition:all 200ms ease}
-.progress__num.is-active{background:var(--accent);color:#061A0F;border-color:var(--accent)}
+.progress__num.is-active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .progress__num.is-done{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
 .progress__line{flex:1;height:1px;background:var(--line-2);transition:background 220ms ease}
 .progress__line.is-done{background:var(--accent)}
@@ -95,14 +99,14 @@ canvas{display:block}
 .field__toggle{position:absolute;right:4px;background:none;border:0;color:var(--muted);cursor:pointer;padding:6px 8px;font-size:.85rem;font-family:var(--font-mono);letter-spacing:.08em;transition:color 150ms ease}
 .field__toggle:hover{color:var(--ink)}
 .field select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%237A9B8C' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 4px center;background-size:12px 8px;padding-right:26px}
-.field select option{background:#0A1A13;color:var(--ink)}
+.field select option{background:var(--paper);color:var(--ink)}
 
 /* ── Banner ─────────────────────────────────────────────── */
 .banner{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--error-bg);border:1px solid var(--error-line);border-radius:var(--radius-s);color:var(--error);font-size:.88rem;margin-bottom:22px}
 
 /* ── Buttons ────────────────────────────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.92rem;font-weight:500;cursor:pointer;border:1px solid transparent;transition:transform 180ms ease,background 200ms ease,color 200ms ease,border-color 200ms ease;text-decoration:none;white-space:nowrap}
-.btn--primary{background:var(--accent);color:#061A0F;font-weight:600}
+.btn--primary{background:var(--accent);color:var(--on-accent);font-weight:600}
 .btn--primary:hover{background:var(--accent-2);transform:translateY(-1px)}
 .btn--soft{background:transparent;color:var(--muted);border-color:var(--line-2)}
 .btn--soft:hover{border-color:var(--accent);color:var(--ink)}
@@ -137,7 +141,10 @@ canvas{display:block}
         <span class="kpi-mark__cube" id="brandMark"></span>
         <span class="kpi-mark__name">KPI<em>Console</em></span>
       </a>
-      <a href="/">← Back to home</a>
+      <span class="topbar-actions">
+        <a href="/">← Back to home</a>
+        <button type="button" class="theme-btn" data-theme-toggle aria-label="Toggle dark/light mode"></button>
+      </span>
     </div>
 
     <div class="auth-stage" id="stage"></div>
@@ -305,9 +312,17 @@ canvas{display:block}
   camera.position.set(2.4,2.0,3.6);camera.lookAt(0,0,0);
   var geo=new THREE.BoxGeometry(1.2,1.2,1.2);
   var grp=new THREE.Group();
-  grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x1A4D3E})));
-  grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.85})));
-  var inner=new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42),new THREE.MeshBasicMaterial({color:0xA7E8CA}));
+  var faceMat=new THREE.MeshBasicMaterial({color:0x1A4D3E});
+  var edgeMat=new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.85});
+  var coreMat=new THREE.MeshBasicMaterial({color:0xA7E8CA});
+  if(window.KPITheme)KPITheme.tintMaterials([
+    {material:faceMat,role:'solid'},
+    {material:edgeMat,role:'edge',opacity:.85},
+    {material:coreMat,role:'edge2'}
+  ]);
+  grp.add(new THREE.Mesh(geo,faceMat));
+  grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),edgeMat));
+  var inner=new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42),coreMat);
   grp.add(inner);scene.add(grp);
   var t=0;
   (function tick(){t+=.008;grp.rotation.x=t*.6;grp.rotation.y=t*.9;inner.rotation.x=-t*1.4;inner.rotation.y=-t*1.1;r.render(scene,camera);requestAnimationFrame(tick)})();
@@ -325,15 +340,25 @@ canvas{display:block}
   var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(40,w/h,.1,100);
   camera.position.set(0,0,9);
 
-  var outer=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(2.6,1)),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.40}));
-  var mid=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.7,0)),new THREE.LineBasicMaterial({color:0xA7E8CA,transparent:true,opacity:.55}));
-  var inner=new THREE.Mesh(new THREE.IcosahedronGeometry(.5,0),new THREE.MeshBasicMaterial({color:0x1A4D3E}));
+  var outerMat=new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.40});
+  var midMat=new THREE.LineBasicMaterial({color:0xA7E8CA,transparent:true,opacity:.55});
+  var coreMeshMat=new THREE.MeshBasicMaterial({color:0x1A4D3E});
+  var outer=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(2.6,1)),outerMat);
+  var mid=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.7,0)),midMat);
+  var inner=new THREE.Mesh(new THREE.IcosahedronGeometry(.5,0),coreMeshMat);
   var grp=new THREE.Group();grp.add(outer);grp.add(mid);grp.add(inner);scene.add(grp);
 
   var COUNT=220,pos=new Float32Array(COUNT*3);
   for(var i=0;i<COUNT;i++){var rr=4+Math.random()*3.5,tt=Math.random()*Math.PI*2,pp=(Math.random()-.5)*Math.PI;pos[i*3]=rr*Math.cos(tt)*Math.cos(pp);pos[i*3+1]=rr*Math.sin(pp)*.8;pos[i*3+2]=rr*Math.sin(tt)*Math.cos(pp)-4}
   var dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  var dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0x7BD3AE,size:.025,transparent:true,opacity:.40,sizeAttenuation:true}));
+  var dotMat=new THREE.PointsMaterial({color:0x7BD3AE,size:.025,transparent:true,opacity:.40,sizeAttenuation:true});
+  var dots=new THREE.Points(dg,dotMat);
+  if(window.KPITheme)KPITheme.tintMaterials([
+    {material:outerMat,role:'edge',opacity:.40},
+    {material:midMat,role:'edge2',opacity:.55},
+    {material:coreMeshMat,role:'solid'},
+    {material:dotMat,role:'dot',opacity:.40}
+  ]);
   scene.add(dots);
 
   var mx=0,my=0;

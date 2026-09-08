@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KPIConsole — Financial Intelligence for Every Industry</title>
 <link href="/static/vendor/fonts/fonts.css" rel="stylesheet">
+<link href="/static/css/theme-public.css" rel="stylesheet">
+<script src="/static/js/theme-public.js"></script>
 <style>
 /* ── Reset & Tokens ─────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -20,6 +22,8 @@
   --accent:   #7BD3AE;
   --accent-2: #A7E8CA;
   --accent-soft: rgba(123,211,174,0.12);
+  --on-accent:#061A0F;
+  --hero-bg:  #040C07;
   --font-display:"Instrument Serif","Times New Roman",serif;
   --font-body:"Inter",system-ui,-apple-system,sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,monospace;
@@ -43,7 +47,7 @@ canvas{display:block}
 
 /* ── Buttons ────────────────────────────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:var(--radius-pill);font-family:var(--font-body);font-size:.92rem;font-weight:500;letter-spacing:-.005em;cursor:pointer;border:1px solid transparent;transition:transform 180ms ease,background 200ms ease,color 200ms ease,border-color 200ms ease;text-decoration:none;white-space:nowrap}
-.btn--primary{background:var(--accent);color:#061A0F;font-weight:600}
+.btn--primary{background:var(--accent);color:var(--on-accent);font-weight:600}
 .btn--primary:hover{background:var(--accent-2);transform:translateY(-1px)}
 .btn--ghost{background:transparent;color:var(--ink);border-color:rgba(255,255,255,.20)}
 .btn--ghost:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.35)}
@@ -55,7 +59,7 @@ canvas{display:block}
 .nav__links{display:flex;gap:6px;align-items:center}
 .nav__link{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);padding:8px 14px;border-radius:var(--radius-pill);transition:color 180ms ease,background 180ms ease}
 .nav__link:hover{color:var(--ink);background:rgba(255,255,255,.06)}
-.nav__cta{margin-left:12px;padding:9px 18px;font-family:var(--font-body);font-size:.86rem;font-weight:600;color:#061A0F;background:var(--accent);border-radius:var(--radius-pill);transition:background 200ms ease,transform 180ms ease}
+.nav__cta{margin-left:12px;padding:9px 18px;font-family:var(--font-body);font-size:.86rem;font-weight:600;color:var(--on-accent);background:var(--accent);border-radius:var(--radius-pill);transition:background 200ms ease,transform 180ms ease}
 .nav__cta:hover{background:var(--accent-2);transform:translateY(-1px)}
 
 /* ── Hero ───────────────────────────────────────────────── */
@@ -165,6 +169,7 @@ section.s{padding:120px 36px;border-bottom:1px solid var(--line)}
     <a href="#industries" class="nav__link">Industries</a>
     <a href="#how" class="nav__link">Method</a>
     <a href="/login/" class="nav__link">Sign in</a>
+    <button type="button" class="theme-btn" data-theme-toggle aria-label="Toggle dark/light mode"></button>
     <a href="/register/" class="nav__cta">Get started →</a>
   </div>
 </nav>
@@ -306,9 +311,17 @@ section.s{padding:120px 36px;border-bottom:1px solid var(--line)}
   camera.position.set(2.4,2.0,3.6);camera.lookAt(0,0,0);
   var geo=new THREE.BoxGeometry(1.2,1.2,1.2);
   var grp=new THREE.Group();
-  grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x1A4D3E})));
-  grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.85})));
-  var inner=new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42),new THREE.MeshBasicMaterial({color:0xA7E8CA}));
+  var faceMat=new THREE.MeshBasicMaterial({color:0x1A4D3E});
+  var edgeMat=new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.85});
+  var coreMat=new THREE.MeshBasicMaterial({color:0xA7E8CA});
+  if(window.KPITheme)KPITheme.tintMaterials([
+    {material:faceMat,role:'solid'},
+    {material:edgeMat,role:'edge',opacity:.85},
+    {material:coreMat,role:'edge2'}
+  ]);
+  grp.add(new THREE.Mesh(geo,faceMat));
+  grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),edgeMat));
+  var inner=new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42),coreMat);
   grp.add(inner);scene.add(grp);
   var t=0;
   (function tick(){t+=.008;grp.rotation.x=t*.6;grp.rotation.y=t*.9;inner.rotation.x=-t*1.4;inner.rotation.y=-t*1.1;r.render(scene,camera);requestAnimationFrame(tick)})();
@@ -325,35 +338,48 @@ section.s{padding:120px 36px;border-bottom:1px solid var(--line)}
   var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,W()/H(),.1,100);
   camera.position.set(0,0,11);
 
+  var themeMats=[];
+
+  var knotMat=new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.45});
   var knot=new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(2.6,.65,220,24,2,3)),
-    new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.45})
+    knotMat
   );
   scene.add(knot);
+  themeMats.push({material:knotMat,role:'edge',opacity:.45});
 
+  var accentKnotMat=new THREE.LineBasicMaterial({color:0xA7E8CA,transparent:true,opacity:.75});
   var accentKnot=new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(2.0,.32,160,18,2,5)),
-    new THREE.LineBasicMaterial({color:0xA7E8CA,transparent:true,opacity:.75})
+    accentKnotMat
   );
   scene.add(accentKnot);
+  themeMats.push({material:accentKnotMat,role:'edge2',opacity:.75});
 
   var cubes=[];
   for(var i=0;i<14;i++){
     var s=.10+Math.random()*.12;
-    var mesh=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),new THREE.MeshBasicMaterial({color:i%4===0?0xA7E8CA:0x1A4D3E}));
+    var cubeMat=new THREE.MeshBasicMaterial({color:i%4===0?0xA7E8CA:0x1A4D3E});
+    themeMats.push({material:cubeMat,role:i%4===0?'edge2':'solid'});
+    var mesh=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),cubeMat);
     var rr=4.0+Math.random()*1.8,a=Math.random()*Math.PI*2,y=(Math.random()-.5)*4;
     mesh.userData={r:rr,a:a,y:y,speed:.0015+Math.random()*.002};
     scene.add(mesh);cubes.push(mesh);
   }
 
-  var ring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.TorusGeometry(4.6,.005,6,200)),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.15}));
+  var ringMat=new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.15});
+  var ring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.TorusGeometry(4.6,.005,6,200)),ringMat);
   ring.rotation.x=Math.PI/2.2;scene.add(ring);
+  themeMats.push({material:ringMat,role:'edge',opacity:.15});
 
   var COUNT=600,pos=new Float32Array(COUNT*3);
   for(var i=0;i<COUNT;i++){pos[i*3]=(Math.random()-.5)*18;pos[i*3+1]=(Math.random()-.5)*12;pos[i*3+2]=(Math.random()-.5)*10-4}
   var dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  var dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0x7BD3AE,size:.022,transparent:true,opacity:.3,sizeAttenuation:true}));
+  var dotMat=new THREE.PointsMaterial({color:0x7BD3AE,size:.022,transparent:true,opacity:.3,sizeAttenuation:true});
+  var dots=new THREE.Points(dg,dotMat);
   scene.add(dots);
+  themeMats.push({material:dotMat,role:'dot',opacity:.3});
+  if(window.KPITheme)KPITheme.tintMaterials(themeMats);
 
   var mx=0,my=0;
   window.addEventListener('mousemove',function(e){mx=(e.clientX/window.innerWidth-.5)*2;my=(e.clientY/window.innerHeight-.5)*2});
@@ -388,9 +414,15 @@ section.s{padding:120px 36px;border-bottom:1px solid var(--line)}
   var COUNT=1800,pPos=new Float32Array(COUNT*3);
   for(var i=0;i<COUNT;i++){pPos[i*3]=(Math.random()-.5)*120;pPos[i*3+1]=(Math.random()-.5)*80;pPos[i*3+2]=(Math.random()-.5)*60-10}
   var pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-  var pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x7BD3AE,size:.06,transparent:true,opacity:.35,sizeAttenuation:true}));
+  var ptsMat=new THREE.PointsMaterial({color:0x7BD3AE,size:.06,transparent:true,opacity:.35,sizeAttenuation:true});
+  var pts=new THREE.Points(pg,ptsMat);
   scene.add(pts);
-  var ring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(8,1.6,160,14,3,4)),new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.25}));
+  var ringMat=new THREE.LineBasicMaterial({color:0x7BD3AE,transparent:true,opacity:.25});
+  var ring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.TorusKnotGeometry(8,1.6,160,14,3,4)),ringMat);
+  if(window.KPITheme)KPITheme.tintMaterials([
+    {material:ptsMat,role:'dot',opacity:.35},
+    {material:ringMat,role:'edge',opacity:.25}
+  ]);
   ring.position.set(0,0,-8);scene.add(ring);
   window.addEventListener('resize',function(){renderer.setSize(W(),H(),false);camera.aspect=W()/H();camera.updateProjectionMatrix()});
   var t=0;

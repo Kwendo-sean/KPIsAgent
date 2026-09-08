@@ -1,0 +1,96 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Light theme for the public pages (landing, login, register).
+
+   Those pages were dark-only. The dashboard already had a light/dark system,
+   so this reuses its exact convention — the `data-theme` attribute and the
+   `kpi-theme` localStorage key — which means a visitor's choice carries over
+   from the marketing pages into the app and back.
+
+   The three pages share one token vocabulary, so a single override block
+   themes all of them. Colours are taken from the dashboard's light palette so
+   the two halves of the product look like one product.
+   ───────────────────────────────────────────────────────────────────────── */
+
+[data-theme="light"] {
+    --bg:          #F7F6F1;   /* dashboard --bg      */
+    --paper:       #FFFFFF;   /* dashboard --surface */
+    --hero-bg:     #F1F0E9;   /* recedes behind the 3D canvas */
+
+    --ink:         #0E1A17;
+    --ink-2:       #1A2421;
+    --muted:       #5E6B66;
+    --subtle:      #8A938F;
+
+    --line:        #E5E7E4;
+    --line-2:      #D4D8D4;
+
+    /* The mint accents are unreadable on a light ground; drop to the
+       dashboard's deep green and use it for text/borders. */
+    --accent:      #1A4D3E;
+    --accent-2:    #2F7A55;
+    --accent-soft: #E8F5EE;
+    --on-accent:   #FFFFFF;   /* text sitting on an accent-filled button */
+
+    --error:       #B84838;
+    --error-bg:    #FBEFEA;
+    --error-line:  rgba(184, 72, 56, .25);
+
+    color-scheme: light;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* The dark theme lightens surfaces with a white wash. That is invisible on a
+   light ground, so these darken instead. */
+[data-theme="light"] .nav__link:hover,
+[data-theme="light"] .btn--ghost:hover {
+    background: rgba(14, 26, 23, .06);
+}
+[data-theme="light"] .btn--ghost {
+    border-color: var(--line-2);
+}
+[data-theme="light"] .btn--ghost:hover {
+    border-color: var(--accent);
+}
+
+/* ── Theme toggle button ──────────────────────────────────────────────────
+   Deliberately quiet: it matches the mono/uppercase treatment already used
+   by the topbar links rather than introducing a new control style. */
+.theme-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: .82rem;
+    line-height: 1;
+    padding: 0;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.theme-btn:hover {
+    color: var(--ink);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+.theme-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Sits alongside the existing topbar links without disturbing their layout. */
+.topbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-btn { transition: none; }
+}
