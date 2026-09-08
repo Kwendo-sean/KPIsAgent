@@ -133,10 +133,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 # existing cloud deployments are completely unaffected.
 LOCAL_AI_MODE = os.environ.get("LOCAL_AI_MODE", "false").strip().lower() in ("1", "true", "yes", "on")
 LOCAL_AI_BASE_URL = os.environ.get("LOCAL_AI_BASE_URL", "http://127.0.0.1:8081/v1").strip()
-LOCAL_AI_MODEL = os.environ.get("LOCAL_AI_MODEL", "qwen2.5-0.5b-instruct").strip()
+LOCAL_AI_MODEL = os.environ.get("LOCAL_AI_MODEL", "gemma-3-1b-it").strip()
 LOCAL_AI_TIMEOUT = int(os.environ.get("LOCAL_AI_TIMEOUT", "120"))
 # Ceiling on generated tokens — the local server's context is 1024.
-LOCAL_AI_MAX_TOKENS = int(os.environ.get("LOCAL_AI_MAX_TOKENS", "384"))
+LOCAL_AI_MAX_TOKENS = int(os.environ.get("LOCAL_AI_MAX_TOKENS", "256"))
 
 # ── Local OCR (RapidOCR + ONNX Runtime CPU, bundled PP-OCR models) ────────────
 # Only consulted when LOCAL_AI_MODE is also true. Default false, so neither

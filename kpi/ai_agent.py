@@ -74,9 +74,9 @@ def _env_key(name: str) -> str:
 # silently escalating off-device.
 
 _LOCAL_AI_DEFAULT_BASE_URL   = "http://127.0.0.1:8081/v1"
-_LOCAL_AI_DEFAULT_MODEL      = "qwen2.5-0.5b-instruct"
+_LOCAL_AI_DEFAULT_MODEL      = "gemma-3-1b-it"
 _LOCAL_AI_DEFAULT_TIMEOUT    = 120
-_LOCAL_AI_DEFAULT_MAX_TOKENS = 384
+_LOCAL_AI_DEFAULT_MAX_TOKENS = 256
 
 # Cloud keys that must be absent from a local-mode deployment.
 _CLOUD_KEY_NAMES = (
@@ -1394,6 +1394,36 @@ Respond ONLY with valid JSON using exactly this structure. Use null if a field i
 
     @staticmethod
     def detect_recurring_payments(transactions: list) -> list:
+        """Detect repeating debits with an honest cadence label.
+
+        Delegates to analytics_tools, which classifies cadence from the observed
+        spacing and the description, and refuses to produce a monthly-equivalent
+        figure when the evidence is weak. The previous rule treated any 20-45 day
+        gap as monthly, which is how an "ANNUAL SAFETY INSPECTION" seen twice,
+        44 days apart, was reported as a monthly cost.
+
+        Backwards compatible: the original keys are all still present.
+        """
+        from .analytics_tools import get_recurring_transactions, normalize
+
+        detected = get_recurring_transactions(
+            normalize(transactions), limit=25)["recurring"]
+        return [
+            {
+                "description":       r["description"],
+                "avg_amount":        r["avg_amount"],
+                "occurrences":       r["occurrences"],
+                "avg_interval_days": r["avg_interval_days"],
+                "cadence":           r["cadence"],
+                "confidence":        r["confidence"],
+                "monthly_equivalent": r["monthly_equivalent"],
+                "label":             r["label"],
+            }
+            for r in detected
+        ]
+
+    @staticmethod
+    def _detect_recurring_payments_legacy(transactions: list) -> list:
         import datetime as _dt
 
         def _parse(d):
@@ -1537,6 +1567,26 @@ KPI Summary:
 Give a direct, data-driven answer. Use KES for currency. Format clearly with bullet points for lists."""
         text = _ask_text(prompt, max_tokens=1024)
         return text if text else self._answer_locally(question, kpis)
+
+    def answer_with_analytics(self, question, transactions, history=None,
+                              opening_balance=None, closing_balance=None):
+        """Answer using deterministic tools, with the model only explaining.
+
+        Local mode only. Every figure comes from analytics_tools; the model
+        selects tools and writes prose. Returns the full pipeline result so
+        callers can inspect the deterministic basis of the answer.
+        """
+        from .tool_router import answer_with_tools
+
+        return answer_with_tools(
+            question=question,
+            transactions=transactions,
+            ask_fn=lambda prompt, max_tokens=256: _ask_text(prompt, max_tokens),
+            router_fn=lambda prompt, max_tokens=160: _ask_text(prompt, max_tokens),
+            history=history,
+            opening_balance=opening_balance,
+            closing_balance=closing_balance,
+        )
 
     def answer_system_question(self, question, system_context):
         if local_ai_enabled():

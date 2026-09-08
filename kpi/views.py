@@ -1834,20 +1834,35 @@ def _process_with_financial_data(bank_statement, financial_data):
         tx_raw = financial_data.get("transactions", [])
         recurring = agent.detect_recurring_payments(tx_raw)
         if recurring:
+            # Report each item at its own cadence. Only items whose cadence is
+            # actually established carry a monthly-equivalent figure.
             lines = "\n".join(
-                f"• {r['description'][:40]} — KES {r['avg_amount']:,.0f}/mo "
-                f"({r['occurrences']}x, every ~{r['avg_interval_days']} days)"
+                f"• {r['description'][:40]} — KES {r['avg_amount']:,.0f} "
+                f"{r['label']} ({r['occurrences']}x, every ~{r['avg_interval_days']} days)"
                 for r in recurring[:10]
             )
+            established = [r for r in recurring if r["monthly_equivalent"] is not None]
+            monthly_total = sum(r["monthly_equivalent"] for r in established)
+            if established:
+                headline = (
+                    f"Estimated monthly recurring spend: KES {monthly_total:,.0f}/mo, "
+                    f"from {len(established)} payment(s) with an established cadence."
+                )
+                if len(established) < len(recurring):
+                    headline += (
+                        f" {len(recurring) - len(established)} further item(s) repeat but "
+                        "not often or regularly enough to state a monthly rate."
+                    )
+            else:
+                headline = (
+                    "These payments repeat, but none has a regular enough cadence "
+                    "to estimate a monthly rate."
+                )
             AIAnalysis.objects.create(
                 bank_statement=bank_statement,
                 analysis_type="INSIGHT",
                 title=f"Recurring Payments Detected ({len(recurring)} found)",
-                content=(
-                    f"The following transactions appear to recur monthly. "
-                    f"Total estimated recurring spend: "
-                    f"KES {sum(r['avg_amount'] for r in recurring):,.0f}/mo.\n\n{lines}"
-                ),
+                content=f"{headline}\n\n{lines}",
             )
             # Auto-tag recurring transactions in the DB
             for r in recurring:
@@ -1970,7 +1985,43 @@ class AskAIView(APIView):
             }
 
             agent = HospitalKPIAgent()
-            answer = agent.answer_system_question(question, system_context)
+
+            if local_ai_enabled():
+                # Local mode answers from deterministic tools rather than prose
+                # context: the model picks tools and explains their output, and
+                # every figure is computed in Python. Transactions are pulled in
+                # full here (not the 50-per-statement prose sample above) because
+                # they go to the tools, not into the prompt.
+                tool_transactions = [
+                    {
+                        "date": str(tx.transaction_date),
+                        "description": tx.description,
+                        "amount": float(tx.amount),
+                        "transaction_type": tx.transaction_type,
+                        "category": tx.category or "",
+                        "running_balance": (float(tx.running_balance)
+                                            if tx.running_balance is not None else None),
+                    }
+                    for s in all_statements for tx in s.transactions.all()
+                ]
+                latest = all_statements.first()
+                outcome = agent.answer_with_analytics(
+                    question,
+                    tool_transactions,
+                    history=[
+                        {"question": h["title"].removeprefix("Q: "), "answer": h["content"]}
+                        for h in reversed(history[:3])
+                    ],
+                    opening_balance=(float(latest.opening_balance)
+                                     if latest and latest.opening_balance is not None else None),
+                    closing_balance=(float(latest.closing_balance)
+                                     if latest and latest.closing_balance is not None else None),
+                )
+                answer = outcome["answer"]
+                logger.info("Assistant answered via tools %s (routed by %s)",
+                            outcome["tools_used"], outcome["routed_by"])
+            else:
+                answer = agent.answer_system_question(question, system_context)
 
             # Save interaction against the latest statement (or the specified one)
             target_statement = None
