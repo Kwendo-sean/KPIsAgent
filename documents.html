@@ -1,4 +1,5 @@
 {% extends "base_dashboard.html" %}
+{% load humanize %}
 
 {% block title %}Documents | KPIConsole{% endblock %}
 {% block eyebrow %}Documents{% endblock %}
@@ -75,12 +76,12 @@
 <div class="doc-grid">
 	<div class="doc-stat">
 		<div class="k">Outstanding</div>
-		<div class="v">{{ aging.total_outstanding|floatformat:2 }}</div>
+		<div class="v">{{ aging.total_outstanding|floatformat:2|intcomma }}</div>
 		<div class="s">Across {{ queue.total }} document{{ queue.total|pluralize }}</div>
 	</div>
 	<div class="doc-stat">
 		<div class="k">Overdue</div>
-		<div class="v" {% if aging.overdue_total %}style="color:var(--danger)"{% endif %}>{{ aging.overdue_total|floatformat:2 }}</div>
+		<div class="v" {% if aging.overdue_total %}style="color:var(--danger)"{% endif %}>{{ aging.overdue_total|floatformat:2|intcomma }}</div>
 		<div class="s">{{ aging.overdue_count }} past due date</div>
 	</div>
 	<div class="doc-stat">
@@ -101,7 +102,7 @@
 		{% for bucket in aging.buckets %}
 		<div class="aging-cell {% if bucket.bucket != 'Current' and bucket.total %}is-late{% endif %}">
 			<div class="k" style="font-size:.70rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);">{{ bucket.bucket }}</div>
-			<div style="font-size:1.05rem;font-weight:600;color:var(--ink);margin-top:4px;">{{ bucket.total|floatformat:2 }}</div>
+			<div style="font-size:1.05rem;font-weight:600;color:var(--ink);margin-top:4px;">{{ bucket.total|floatformat:2|intcomma }}</div>
 			<div style="font-size:.72rem;color:var(--subtle);">{{ bucket.count }} doc{{ bucket.count|pluralize }} · {{ bucket.pct }}%</div>
 			<div class="aging-bar"><span style="width:{{ bucket.pct }}%"></span></div>
 		</div>
@@ -119,8 +120,8 @@
 			{% for row in exposure %}
 				<tr>
 					<td>{{ row.counterparty }}</td>
-					<td>{{ row.total|floatformat:2 }}</td>
-					<td {% if row.overdue %}style="color:var(--danger)"{% endif %}>{{ row.overdue|floatformat:2 }}</td>
+					<td>{{ row.total|floatformat:2|intcomma }}</td>
+					<td {% if row.overdue %}style="color:var(--danger)"{% endif %}>{{ row.overdue|floatformat:2|intcomma }}</td>
 					<td>{{ row.count }}</td>
 					<td>{% if row.max_days_overdue %}{{ row.max_days_overdue }} days{% else %}—{% endif %}</td>
 				</tr>
@@ -187,7 +188,7 @@
 					<td>{{ doc.get_doc_type_display }}</td>
 					<td>{{ doc.get_department_display }}</td>
 					<td>{{ doc.counterparty|default:"—"|truncatechars:28 }}</td>
-					<td>{% if doc.amount != None %}{{ doc.currency }} {{ doc.amount|floatformat:2 }}{% else %}—{% endif %}</td>
+					<td>{% if doc.amount != None %}{{ doc.currency }} {{ doc.amount|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
 					<td>
 						{% if doc.due_date %}{{ doc.due_date }}
 							{% with od=doc.days_overdue %}{% if od %}<div><span class="pill bad">{{ od }}d late</span></div>{% endif %}{% endwith %}

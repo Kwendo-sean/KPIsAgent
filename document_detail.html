@@ -1,4 +1,5 @@
 {% extends "base_dashboard.html" %}
+{% load humanize %}
 
 {% block title %}{{ document.title }} | KPIConsole{% endblock %}
 {% block eyebrow %}Documents{% endblock %}
@@ -59,7 +60,7 @@
 			<div class="dd-fields">
 				<div class="dd-field">
 					<div class="k">Amount</div>
-					<div class="v">{% if document.amount != None %}{{ document.currency }} {{ document.amount|floatformat:2 }}{% else %}Not stated{% endif %}</div>
+					<div class="v">{% if document.amount != None %}{{ document.currency }} {{ document.amount|floatformat:2|intcomma }}{% else %}Not stated{% endif %}</div>
 				</div>
 				<div class="dd-field">
 					<div class="k">Counterparty</div>

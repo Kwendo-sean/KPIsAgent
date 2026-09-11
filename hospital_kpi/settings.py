@@ -21,6 +21,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Thousand separators on money figures — unreadable without them.
+    "django.contrib.humanize",
     "corsheaders",
     "rest_framework",
     "django_q",
