@@ -1,0 +1,195 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}{{ document.title }} | KPIConsole{% endblock %}
+{% block eyebrow %}Documents{% endblock %}
+{% block page_title %}{{ document.title|truncatechars:52 }}{% endblock %}
+{% block subtitle %}{{ document.get_doc_type_display }} · {{ document.get_department_display }}{% endblock %}
+
+{% block extra_head %}
+<style>
+	.dd-wrap { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:16px; align-items:start; }
+	@media (max-width:900px) { .dd-wrap { grid-template-columns:1fr; } }
+	.dd-panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:16px; }
+	.dd-panel h3 { margin:0 0 12px; font-size:.95rem; color:var(--ink); }
+	.dd-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+	.dd-field .k { font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+	.dd-field .v { font-size:.95rem; color:var(--ink); margin-top:3px; word-break:break-word; }
+	.dd-form label { display:block; margin-bottom:11px; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+	.dd-form input, .dd-form select, .dd-form textarea {
+		width:100%; margin-top:5px; padding:8px 10px; border:1px solid var(--line);
+		border-radius:8px; background:var(--surface); color:var(--ink); font-size:.86rem;
+		font-family:inherit;
+	}
+	.dd-form textarea { min-height:80px; resize:vertical; }
+	.dd-text {
+		background:var(--surface-alt); border:1px solid var(--line); border-radius:8px;
+		padding:12px; font-family:var(--font-mono,monospace); font-size:.74rem;
+		color:var(--text); white-space:pre-wrap; max-height:340px; overflow:auto;
+	}
+	.dd-banner { border-left:3px solid var(--accent); padding:10px 14px; background:var(--surface-alt); border-radius:6px; margin-bottom:14px; font-size:.85rem; }
+	.dd-banner.bad { border-left-color:var(--danger); }
+	.dd-actions { display:flex; gap:10px; flex-wrap:wrap; }
+	.pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.7rem; font-weight:600; border:1px solid var(--line-strong); color:var(--muted); }
+	.pill.bad { color:var(--danger); border-color:var(--danger); }
+	.pill.ok { color:var(--good); border-color:var(--good); }
+</style>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'documents' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> All documents</a>
+{% endblock %}
+
+{% block content %}
+{% if messages %}{% for message in messages %}
+<div class="dd-banner">{{ message }}</div>
+{% endfor %}{% endif %}
+
+{% if document.processing_error %}
+<div class="dd-banner bad"><strong>Extraction note:</strong> {{ document.processing_error }}</div>
+{% endif %}
+
+<div class="dd-wrap">
+	<div>
+		<div class="dd-panel">
+			<h3>Extracted details</h3>
+			<p style="margin:-6px 0 14px;font-size:.76rem;color:var(--subtle);">
+				Parsed from the document by rule-based extraction. Correct anything that is wrong —
+				your edit is kept.
+			</p>
+			<div class="dd-fields">
+				<div class="dd-field">
+					<div class="k">Amount</div>
+					<div class="v">{% if document.amount != None %}{{ document.currency }} {{ document.amount|floatformat:2 }}{% else %}Not stated{% endif %}</div>
+				</div>
+				<div class="dd-field">
+					<div class="k">Counterparty</div>
+					<div class="v">{{ document.counterparty|default:"Not stated" }}</div>
+				</div>
+				<div class="dd-field">
+					<div class="k">Reference</div>
+					<div class="v">{{ document.reference|default:"Not stated" }}</div>
+				</div>
+				<div class="dd-field">
+					<div class="k">Document date</div>
+					<div class="v">{{ document.doc_date|default:"Not stated" }}</div>
+				</div>
+				<div class="dd-field">
+					<div class="k">Due date</div>
+					<div class="v">
+						{{ document.due_date|default:"Not stated" }}
+						{% if days_overdue %}<span class="pill bad">{{ days_overdue }} days late</span>{% endif %}
+					</div>
+				</div>
+				<div class="dd-field">
+					<div class="k">Status</div>
+					<div class="v">
+						{% if document.status == 'CLEARED' %}<span class="pill ok">{{ document.get_status_display }}</span>
+						{% else %}<span class="pill">{{ document.get_status_display }}</span>{% endif %}
+					</div>
+				</div>
+			</div>
+		</div>
+
+		{% if document.summary %}
+		<div class="dd-panel">
+			<h3>Summary</h3>
+			<p style="margin:0;font-size:.88rem;color:var(--text);">{{ document.summary }}</p>
+			<p style="margin:10px 0 0;font-size:.72rem;color:var(--subtle);">
+				Written from the extracted fields above. The figures shown on this page come from
+				rule-based extraction, not from this summary.
+			</p>
+		</div>
+		{% endif %}
+
+		<div class="dd-panel">
+			<h3>Extracted text</h3>
+			{% if text_preview %}
+			<div class="dd-text">{{ text_preview }}</div>
+			{% else %}
+			<p style="margin:0;color:var(--muted);font-size:.85rem;">No text was extracted from this file.</p>
+			{% endif %}
+		</div>
+	</div>
+
+	<div>
+		<div class="dd-panel">
+			<h3>Review</h3>
+			<form method="post" action="{% url 'update_document' document.id %}" class="dd-form">
+				{% csrf_token %}
+				<label>Status
+					<select name="status">
+						{% for code, name in document_status_choices %}
+						<option value="{{ code }}" {% if document.status == code %}selected{% endif %}>{{ name }}</option>
+						{% endfor %}
+					</select>
+				</label>
+				<label>Department
+					<select name="department">
+						{% for code, name in departments %}
+						<option value="{{ code }}" {% if document.department == code %}selected{% endif %}>{{ name }}</option>
+						{% endfor %}
+					</select>
+				</label>
+				<label>Type
+					<select name="doc_type">
+						{% for code, name in document_types %}
+						<option value="{{ code }}" {% if document.doc_type == code %}selected{% endif %}>{{ name }}</option>
+						{% endfor %}
+					</select>
+				</label>
+				<label>Counterparty
+					<input type="text" name="counterparty" value="{{ document.counterparty }}">
+				</label>
+				<label>Reference
+					<input type="text" name="reference" value="{{ document.reference }}">
+				</label>
+				<label>Amount
+					<input type="text" name="amount" value="{% if document.amount != None %}{{ document.amount }}{% endif %}" placeholder="Leave blank if not stated">
+				</label>
+				<label>Document date
+					<input type="date" name="doc_date" value="{{ document.doc_date|date:'Y-m-d' }}">
+				</label>
+				<label>Due date
+					<input type="date" name="due_date" value="{{ document.due_date|date:'Y-m-d' }}">
+				</label>
+				<label>Notes
+					<textarea name="notes" placeholder="Chase history, agreed payment plan, internal notes">{{ document.notes }}</textarea>
+				</label>
+				<button type="submit" class="btn btn-primary" style="width:100%"><i class="fas fa-save"></i> Save</button>
+			</form>
+		</div>
+
+		<div class="dd-panel">
+			<h3>Actions</h3>
+			<div class="dd-actions">
+				<form method="post" action="{% url 'reextract_document' document.id %}">
+					{% csrf_token %}
+					<button type="submit" class="btn btn-secondary"><i class="fas fa-rotate"></i> Re-extract fields</button>
+				</form>
+				<form method="post" action="{% url 'summarize_document' document.id %}">
+					{% csrf_token %}
+					<button type="submit" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles"></i> Summarise</button>
+				</form>
+				{% if document.file %}
+				<a href="{{ document.file.url }}" class="btn btn-secondary" target="_blank" rel="noopener">
+					<i class="fas fa-download"></i> Original file
+				</a>
+				{% endif %}
+				{% if document.source_statement %}
+				<a href="{% url 'statement_detail' document.source_statement.id %}" class="btn btn-secondary">
+					<i class="fas fa-file-invoice-dollar"></i> Source statement
+				</a>
+				{% endif %}
+			</div>
+			<form method="post" action="{% url 'delete_document' document.id %}"
+				  onsubmit="return confirm('Delete this document? This cannot be undone.')"
+				  style="margin-top:12px;">
+				{% csrf_token %}
+				<button type="submit" class="btn btn-secondary" style="color:var(--danger);border-color:var(--danger)">
+					<i class="fas fa-trash"></i> Delete document
+				</button>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

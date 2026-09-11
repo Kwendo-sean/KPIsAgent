@@ -1,0 +1,257 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Documents | KPIConsole{% endblock %}
+{% block eyebrow %}Documents{% endblock %}
+{% block page_title %}Document <em>processing</em>{% endblock %}
+{% block subtitle %}Invoices, remittances and supporting files by department. Amounts and aging are calculated from the documents themselves.{% endblock %}
+
+{% block extra_head %}
+<style>
+	.doc-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+	.doc-actions { display:flex; gap:10px; flex-wrap:wrap; }
+	.doc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:18px; }
+	.doc-stat { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; }
+	.doc-stat .k { font-size:.70rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+	.doc-stat .v { font-size:1.3rem; font-weight:600; color:var(--ink); margin-top:4px; }
+	.doc-stat .s { font-size:.74rem; color:var(--subtle); margin-top:2px; }
+	.aging-row { display:flex; gap:10px; flex-wrap:wrap; }
+	.aging-cell { flex:1 1 130px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; }
+	.aging-cell.is-late { border-color:var(--danger); }
+	.aging-bar { height:4px; border-radius:2px; background:var(--line); margin-top:8px; overflow:hidden; }
+	.aging-bar span { display:block; height:100%; background:var(--accent); }
+	.aging-cell.is-late .aging-bar span { background:var(--danger); }
+	.doc-panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:18px; }
+	.doc-panel h3 { margin:0 0 12px; font-size:.95rem; color:var(--ink); }
+	.doc-filters { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+	.doc-filters label { display:flex; flex-direction:column; gap:4px; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+	.doc-filters select, .doc-filters input {
+		padding:7px 10px; border:1px solid var(--line); border-radius:8px;
+		background:var(--surface); color:var(--ink); font-size:.84rem; min-width:150px;
+	}
+	table.doc-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+	table.doc-table th { text-align:left; font-size:.70rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); }
+	table.doc-table td { padding:10px; border-bottom:1px solid var(--line); color:var(--text); vertical-align:top; }
+	table.doc-table tr:hover td { background:var(--surface-alt); }
+	.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.70rem; font-weight:600; border:1px solid var(--line-strong); color:var(--muted); }
+	.pill.ok { color:var(--good); border-color:var(--good); }
+	.pill.warn { color:var(--warning); border-color:var(--warning); }
+	.pill.bad { color:var(--danger); border-color:var(--danger); }
+	.doc-empty { text-align:center; padding:34px 16px; color:var(--muted); }
+	.modal-back { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:90; padding:16px; }
+	.modal-back.is-open { display:flex; }
+	.modal-card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; width:100%; max-width:460px; }
+	.modal-card h3 { margin:0 0 14px; font-size:1rem; color:var(--ink); }
+	.modal-card label { display:block; margin-bottom:12px; font-size:.76rem; color:var(--muted); }
+	.modal-card input, .modal-card select {
+		width:100%; margin-top:5px; padding:8px 10px; border:1px solid var(--line);
+		border-radius:8px; background:var(--surface); color:var(--ink); font-size:.86rem;
+	}
+	.doc-overflow { overflow-x:auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="doc-head">
+	<div></div>
+	<div class="doc-actions">
+		{% if importable_count %}
+		<form method="post" action="{% url 'import_statements_as_documents' %}">
+			{% csrf_token %}
+			<button type="submit" class="btn btn-secondary">
+				<i class="fas fa-file-import"></i> Import {{ importable_count }} statement{{ importable_count|pluralize }}
+			</button>
+		</form>
+		{% endif %}
+		<button type="button" class="btn btn-primary" onclick="document.getElementById('uploadModal').classList.add('is-open')">
+			<i class="fas fa-plus"></i> Add document
+		</button>
+	</div>
+</div>
+
+{% if messages %}{% for message in messages %}
+<div class="doc-panel" style="border-left:3px solid var(--accent);">{{ message }}</div>
+{% endfor %}{% endif %}
+
+<div class="doc-grid">
+	<div class="doc-stat">
+		<div class="k">Outstanding</div>
+		<div class="v">{{ aging.total_outstanding|floatformat:2 }}</div>
+		<div class="s">Across {{ queue.total }} document{{ queue.total|pluralize }}</div>
+	</div>
+	<div class="doc-stat">
+		<div class="k">Overdue</div>
+		<div class="v" {% if aging.overdue_total %}style="color:var(--danger)"{% endif %}>{{ aging.overdue_total|floatformat:2 }}</div>
+		<div class="s">{{ aging.overdue_count }} past due date</div>
+	</div>
+	<div class="doc-stat">
+		<div class="k">Needs attention</div>
+		<div class="v">{{ queue.needs_attention }}</div>
+		<div class="s">Missing amount or counterparty</div>
+	</div>
+	<div class="doc-stat">
+		<div class="k">As of</div>
+		<div class="v" style="font-size:1rem;">{{ aging.as_of }}</div>
+		<div class="s">Aging reference date</div>
+	</div>
+</div>
+
+<div class="doc-panel">
+	<h3>Aging — outstanding by days past due</h3>
+	<div class="aging-row">
+		{% for bucket in aging.buckets %}
+		<div class="aging-cell {% if bucket.bucket != 'Current' and bucket.total %}is-late{% endif %}">
+			<div class="k" style="font-size:.70rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);">{{ bucket.bucket }}</div>
+			<div style="font-size:1.05rem;font-weight:600;color:var(--ink);margin-top:4px;">{{ bucket.total|floatformat:2 }}</div>
+			<div style="font-size:.72rem;color:var(--subtle);">{{ bucket.count }} doc{{ bucket.count|pluralize }} · {{ bucket.pct }}%</div>
+			<div class="aging-bar"><span style="width:{{ bucket.pct }}%"></span></div>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+
+{% if exposure %}
+<div class="doc-panel">
+	<h3>Exposure by counterparty</h3>
+	<div class="doc-overflow">
+		<table class="doc-table">
+			<thead><tr><th>Counterparty</th><th>Outstanding</th><th>Overdue</th><th>Docs</th><th>Worst age</th></tr></thead>
+			<tbody>
+			{% for row in exposure %}
+				<tr>
+					<td>{{ row.counterparty }}</td>
+					<td>{{ row.total|floatformat:2 }}</td>
+					<td {% if row.overdue %}style="color:var(--danger)"{% endif %}>{{ row.overdue|floatformat:2 }}</td>
+					<td>{{ row.count }}</td>
+					<td>{% if row.max_days_overdue %}{{ row.max_days_overdue }} days{% else %}—{% endif %}</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endif %}
+
+<div class="doc-panel">
+	<form method="get" class="doc-filters">
+		<label>Department
+			<select name="department">
+				<option value="">All</option>
+				{% for code, name in departments %}
+				<option value="{{ code }}" {% if filter_department == code %}selected{% endif %}>{{ name }}</option>
+				{% endfor %}
+			</select>
+		</label>
+		<label>Type
+			<select name="doc_type">
+				<option value="">All</option>
+				{% for code, name in document_types %}
+				<option value="{{ code }}" {% if filter_doc_type == code %}selected{% endif %}>{{ name }}</option>
+				{% endfor %}
+			</select>
+		</label>
+		<label>Status
+			<select name="status">
+				<option value="">All</option>
+				{% for code, name in document_status_choices %}
+				<option value="{{ code }}" {% if filter_status == code %}selected{% endif %}>{{ name }}</option>
+				{% endfor %}
+			</select>
+		</label>
+		<label>Search
+			<input type="search" name="q" value="{{ search_query }}" placeholder="Title, counterparty, reference">
+		</label>
+		<button type="submit" class="btn btn-secondary">Filter</button>
+		<a href="{% url 'documents' %}" class="btn btn-secondary">Reset</a>
+	</form>
+</div>
+
+<div class="doc-panel">
+	<h3>Documents ({{ documents|length }})</h3>
+	{% if documents %}
+	<div class="doc-overflow">
+		<table class="doc-table">
+			<thead>
+				<tr>
+					<th>Document</th><th>Type</th><th>Department</th><th>Counterparty</th>
+					<th>Amount</th><th>Due</th><th>Status</th>
+				</tr>
+			</thead>
+			<tbody>
+			{% for doc in documents %}
+				<tr onclick="window.location='{% url 'document_detail' doc.id %}'" style="cursor:pointer">
+					<td>
+						<strong style="color:var(--ink)">{{ doc.title|truncatechars:46 }}</strong>
+						{% if doc.reference %}<div style="font-size:.72rem;color:var(--subtle)">Ref {{ doc.reference }}</div>{% endif %}
+						{% if doc.source == 'STATEMENT' %}<div style="font-size:.70rem;color:var(--subtle)">From statement</div>{% endif %}
+					</td>
+					<td>{{ doc.get_doc_type_display }}</td>
+					<td>{{ doc.get_department_display }}</td>
+					<td>{{ doc.counterparty|default:"—"|truncatechars:28 }}</td>
+					<td>{% if doc.amount != None %}{{ doc.currency }} {{ doc.amount|floatformat:2 }}{% else %}—{% endif %}</td>
+					<td>
+						{% if doc.due_date %}{{ doc.due_date }}
+							{% with od=doc.days_overdue %}{% if od %}<div><span class="pill bad">{{ od }}d late</span></div>{% endif %}{% endwith %}
+						{% else %}—{% endif %}
+					</td>
+					<td>
+						{% if doc.status == 'CLEARED' %}<span class="pill ok">{{ doc.get_status_display }}</span>
+						{% elif doc.status == 'FAILED' %}<span class="pill bad">{{ doc.get_status_display }}</span>
+						{% elif doc.status == 'PENDING' %}<span class="pill warn">{{ doc.get_status_display }}</span>
+						{% else %}<span class="pill">{{ doc.get_status_display }}</span>{% endif %}
+					</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	{% else %}
+	<div class="doc-empty">
+		<p style="margin:0 0 10px;">No documents yet.</p>
+		{% if importable_count %}
+		<p style="margin:0;font-size:.85rem;">
+			You have {{ importable_count }} statement{{ importable_count|pluralize }} that can be imported to get started.
+		</p>
+		{% else %}
+		<p style="margin:0;font-size:.85rem;">Add an invoice, remittance or contract to begin.</p>
+		{% endif %}
+	</div>
+	{% endif %}
+</div>
+
+<div class="modal-back" id="uploadModal">
+	<div class="modal-card">
+		<h3>Add document</h3>
+		<form method="post" action="{% url 'upload_document' %}" enctype="multipart/form-data">
+			{% csrf_token %}
+			<label>File (PDF, CSV, XLSX — max 25 MB)
+				<input type="file" name="file" required accept=".pdf,.csv,.txt,.xlsx,.xls">
+			</label>
+			<label>Title (optional)
+				<input type="text" name="title" placeholder="Defaults to the file name">
+			</label>
+			<label>Department
+				<select name="department">
+					{% for code, name in departments %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+				</select>
+			</label>
+			<label>Type
+				<select name="doc_type">
+					<option value="OTHER">Detect automatically</option>
+					{% for code, name in document_types %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+				</select>
+			</label>
+			<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+				<button type="button" class="btn btn-secondary"
+					onclick="document.getElementById('uploadModal').classList.remove('is-open')">Cancel</button>
+				<button type="submit" class="btn btn-primary">Upload</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<script>
+	document.getElementById('uploadModal').addEventListener('click', function (e) {
+		if (e.target === this) this.classList.remove('is-open');
+	});
+</script>
+{% endblock %}

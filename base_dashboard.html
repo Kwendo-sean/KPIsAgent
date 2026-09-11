@@ -1071,6 +1071,9 @@
 				<span class="nav-link-inner"><i class="fas fa-folder-open" aria-hidden="true"></i> Statements</span>
 				<span class="nav-badge" aria-label="{{ total_statements }} statements">{{ total_statements }}</span>
 			</a>
+			<a href="{% url 'documents' %}" class="nav-link {% if active_page == 'documents' %}is-active{% endif %}" aria-current="{% if active_page == 'documents' %}page{% endif %}">
+				<span class="nav-link-inner"><i class="fas fa-file-invoice" aria-hidden="true"></i> Documents</span>
+			</a>
 			<a href="{% url 'kpi_comparison' %}" class="nav-link {% if active_page == 'analytics' %}is-active{% endif %}" aria-current="{% if active_page == 'analytics' %}page{% endif %}">
 				<span class="nav-link-inner"><i class="fas fa-chart-simple" aria-hidden="true"></i> Analytics</span>
 			</a>

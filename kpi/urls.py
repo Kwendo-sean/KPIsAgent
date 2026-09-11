@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import document_views, views
 
 urlpatterns = [
     # ── Landing & Auth ────────────────────────────────────────────────────
@@ -16,6 +16,21 @@ urlpatterns = [
     path("statements/", views.statements_view, name="statements"),
     path("assistant/", views.assistant_view, name="assistant"),
     path("comparison/", views.kpi_comparison, name="kpi_comparison"),
+
+    # ── Document processing & analysis ────────────────────────────────────
+    path("documents/", document_views.documents_view, name="documents"),
+    path("documents/upload/", document_views.upload_document, name="upload_document"),
+    path("documents/import-statements/", document_views.import_statements_as_documents,
+         name="import_statements_as_documents"),
+    path("documents/<int:document_id>/", document_views.document_detail, name="document_detail"),
+    path("documents/<int:document_id>/update/", document_views.update_document,
+         name="update_document"),
+    path("documents/<int:document_id>/reextract/", document_views.reextract_document,
+         name="reextract_document"),
+    path("documents/<int:document_id>/summarize/", document_views.summarize_document,
+         name="summarize_document"),
+    path("documents/<int:document_id>/delete/", document_views.delete_document,
+         name="delete_document"),
 
     # ── Statement actions ─────────────────────────────────────────────────
     path("upload/", views.upload_bank_statement, name="upload"),

@@ -255,3 +255,108 @@ class TwoFactorProfile(models.Model):
 
     def __str__(self):
         return f"2FA for {self.user.username} ({'on' if self.is_enabled else 'off'})"
+
+
+DOCUMENT_TYPES = [
+    ("INVOICE", "Invoice"),
+    ("RECEIPT", "Receipt"),
+    ("REMITTANCE", "Remittance Advice"),
+    ("CONTRACT", "Contract / Agreement"),
+    ("KYC", "KYC / Identity"),
+    ("STATEMENT", "Bank Statement"),
+    ("CORRESPONDENCE", "Letter / Correspondence"),
+    ("OTHER", "Other"),
+]
+
+DEPARTMENTS = [
+    ("CREDIT_CONTROL", "Credit Control"),
+    ("FINANCE", "Finance"),
+    ("PROCUREMENT", "Procurement"),
+    ("COMPLIANCE", "Compliance"),
+    ("OPERATIONS", "Operations"),
+]
+
+DOCUMENT_STATUS = [
+    ("PENDING", "Pending Review"),
+    ("PROCESSED", "Processed"),
+    ("IN_REVIEW", "In Review"),
+    ("CLEARED", "Cleared"),
+    ("FAILED", "Extraction Failed"),
+]
+
+
+class Document(models.Model):
+    """A business document routed to a department for processing and review.
+
+    Deliberately separate from BankStatement: statements are a parsed financial
+    ledger, whereas these are arbitrary documents (invoices, remittances, KYC)
+    that departments work through. A Document may point back at the statement it
+    came from, so the existing corpus can populate this section without anyone
+    re-uploading anything.
+
+    Every extracted field here is produced by deterministic parsing in
+    document_analysis.py. No value on this model originates from a language model.
+    """
+    owner = models.ForeignKey(User, on_delete=models.CASCADE,
+                              related_name="documents", db_index=True)
+    sub_account = models.ForeignKey(
+        SubAccount, on_delete=models.CASCADE,
+        related_name="documents", null=True, blank=True,
+    )
+
+    title = models.CharField(max_length=255)
+    doc_type = models.CharField(max_length=30, choices=DOCUMENT_TYPES, default="OTHER", db_index=True)
+    department = models.CharField(max_length=30, choices=DEPARTMENTS,
+                                  default="CREDIT_CONTROL", db_index=True)
+    status = models.CharField(max_length=20, choices=DOCUMENT_STATUS,
+                              default="PENDING", db_index=True)
+
+    file = models.FileField(upload_to=_user_upload_path, null=True, blank=True)
+    # Where this record came from: an upload, or an existing bank statement.
+    source = models.CharField(max_length=20, default="UPLOAD")
+    source_statement = models.ForeignKey(
+        BankStatement, on_delete=models.CASCADE,
+        related_name="documents", null=True, blank=True,
+    )
+
+    extracted_text = models.TextField(blank=True, null=True)
+
+    # ── Deterministically extracted fields ───────────────────────────────
+    counterparty = models.CharField(max_length=200, blank=True, db_index=True)
+    reference = models.CharField(max_length=100, blank=True)
+    amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=10, blank=True)
+    doc_date = models.DateField(null=True, blank=True, db_index=True)
+    due_date = models.DateField(null=True, blank=True, db_index=True)
+
+    # Narrative only. Never the source of a figure.
+    summary = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    processing_error = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["owner", "department"]),
+            models.Index(fields=["owner", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_doc_type_display()}: {self.title}"
+
+    @property
+    def is_outstanding(self) -> bool:
+        """Open items only: cleared documents are no longer receivable."""
+        return self.status in ("PENDING", "IN_REVIEW", "PROCESSED")
+
+    def days_overdue(self, today=None) -> int | None:
+        """Whole days past the due date, or None when not applicable."""
+        if not self.due_date or not self.is_outstanding:
+            return None
+        from datetime import date as _date
+        today = today or _date.today()
+        delta = (today - self.due_date).days
+        return delta if delta > 0 else 0
