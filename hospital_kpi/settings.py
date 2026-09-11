@@ -60,7 +60,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "hospital_kpi.wsgi.application"
 
-if os.environ.get("MYSQL_DATABASE"):
+if os.environ.get("POSTGRES_DB"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB"),
+            "USER": os.environ.get("POSTGRES_USER"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+            "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        }
+    }
+elif os.environ.get("MYSQL_DATABASE"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
